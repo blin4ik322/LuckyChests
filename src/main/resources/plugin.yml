@@ -28,6 +28,11 @@ commands:
     description: Показать топ кланов по очкам (ClanScores). Доступна всем игрокам.
     usage: /top
     aliases: [топ, clantop]
+  event:
+    description: Управление ивентом сужения барьера мира (WorldBorderTimer). Только для операторов.
+    usage: /event <start <время> <радиус>|stop>
+    aliases: [ивент, барьер]
+    permission: luckychests.event
 
 permissions:
   luckychests.expboost:
@@ -38,4 +43,7 @@ permissions:
     default: op
   luckychests.clan.score:
     description: Доступ к команде /clan score (ручное начисление очков клану)
+    default: op
+  luckychests.event:
+    description: Доступ к команде /event (запуск/остановка сужения барьера мира)
     default: op

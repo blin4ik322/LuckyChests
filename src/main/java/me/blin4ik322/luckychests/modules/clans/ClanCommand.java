@@ -125,7 +125,7 @@ public class ClanCommand implements CommandExecutor, TabCompleter {
             return;
         }
 
-        player.sendMessage(ChatColor.GREEN + "Клан \"" + clan.getName() + "\" успешно создан! Вы его лидер.");
+        player.sendMessage(ChatColor.GREEN + "Клан " + ChatColor.AQUA + clan.getName() + " успешно создан! Вы его лидер.");
     }
 
     private void handleLeave(Player player) {
@@ -202,8 +202,8 @@ public class ClanCommand implements CommandExecutor, TabCompleter {
         }
 
         player.sendMessage(ChatColor.GREEN + "Приглашение отправлено игроку " + target.getName() + ".");
-        target.sendMessage(ChatColor.YELLOW + "Вас пригласили в клан \"" + clan.getName()
-                + "\". Введите " + ChatColor.GOLD + "/clan accept" + ChatColor.YELLOW + " чтобы вступить.");
+        target.sendMessage(ChatColor.YELLOW + "Вас пригласили в клан " + ChatColor.AQUA + clan.getName()
+                + ". Введите " + ChatColor.GOLD + "/clan accept" + ChatColor.YELLOW + " чтобы вступить.");
     }
 
     private void handleAccept(Player player) {
@@ -222,7 +222,7 @@ public class ClanCommand implements CommandExecutor, TabCompleter {
             return;
         }
 
-        player.sendMessage(ChatColor.GREEN + "Вы вступили в клан \"" + clan.getName() + "\"!");
+        player.sendMessage(ChatColor.GREEN + "Вы вступили в клан " +ChatColor.AQUA+ clan.getName() + "!");
         for (UUID memberId : clan.getMembers()) {
             if (memberId.equals(player.getUniqueId())) {
                 continue;
@@ -303,7 +303,7 @@ public class ClanCommand implements CommandExecutor, TabCompleter {
 
         Player newLeaderPlayer = Bukkit.getPlayer(newLeaderId);
         if (newLeaderPlayer != null && newLeaderPlayer.isOnline()) {
-            newLeaderPlayer.sendMessage(ChatColor.GOLD + "Вы стали новым лидером клана \"" + clan.getName() + "\"!");
+            newLeaderPlayer.sendMessage(ChatColor.GOLD + "Вы стали новым лидером клана " + ChatColor.AQUA + clan.getName() + "!");
         }
     }
 
@@ -337,7 +337,7 @@ public class ClanCommand implements CommandExecutor, TabCompleter {
         }
 
         manager.addScore(clan, amount);
-        player.sendMessage(ChatColor.GREEN + "Клану \"" + clan.getName() + "\" начислено " + amount
+        player.sendMessage(ChatColor.GREEN + "Клану " + ChatColor.AQUA + clan.getName() + " начислено " + amount
                 + " очков. Текущий счёт: " + clan.getScore() + ".");
     }
 

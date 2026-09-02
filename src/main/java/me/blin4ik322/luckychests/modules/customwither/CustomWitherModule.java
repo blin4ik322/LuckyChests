@@ -74,10 +74,6 @@ public class CustomWitherModule implements Listener {
     }
 
     private void transformIntoHellishBosyak(Wither wither) {
-        // Обнуляем "тики неуязвимости" — именно на них завязана анимация появления
-        // визера (рёв + ударная волна + звук на весь сервер). Обнуление сразу
-        // делает визера полностью беззвучным при спавне и мгновенно уязвимым.
-        wither.setInvulnerabilityTicks(0);
 
         wither.setCustomName(CUSTOM_NAME);
         wither.setCustomNameVisible(true);
@@ -119,8 +115,8 @@ public class CustomWitherModule implements Listener {
 
         clanManager.addScore(clan, KILL_REWARD);
 
-        killer.sendMessage(ChatColor.LIGHT_PURPLE + "Вы убили Адского Босяка! Клану \""
-                + clan.getName() + "\" начислено " + KILL_REWARD + " очков.");
+        killer.sendMessage(ChatColor.LIGHT_PURPLE + "Вы убили Адского Босяка! Клану "
+                + ChatColor.BOLD + ChatColor.GOLD + clan.getName() + ChatColor.LIGHT_PURPLE + " начислено " + ChatColor.AQUA + KILL_REWARD + ChatColor.LIGHT_PURPLE +" очков.");
 
         for (java.util.UUID memberId : clan.getMembers()) {
             if (memberId.equals(killer.getUniqueId())) {
@@ -144,10 +140,10 @@ public class CustomWitherModule implements Listener {
      */
     private static String buildGradientName() {
         char[] chars = {
-                '/', '/', '/', ' ',
+                '◆', '◆', '◆', ' ',
                 'А', 'д', 'с', 'к', 'и', 'й', ' ',
                 'Б', 'о', 'с', 'я', 'к', ' ',
-                '\\', '\\', '\\'
+                '◆', '◆', '◆'
         };
         String[] hex = {
                 "E43A96", "E3459E", "E24FA6", "E24FA6",
