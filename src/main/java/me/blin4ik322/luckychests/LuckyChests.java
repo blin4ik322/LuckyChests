@@ -7,6 +7,7 @@ import me.blin4ik322.luckychests.modules.clans.ClanTopCommand;
 import me.blin4ik322.luckychests.modules.core.ModuleManager;
 import me.blin4ik322.luckychests.modules.customwither.CustomWitherModule;
 import me.blin4ik322.luckychests.modules.expboost.ExpBoostModule;
+import me.blin4ik322.luckychests.modules.invest.InvestModule;
 import me.blin4ik322.luckychests.modules.witherboost.WitherBoostModule;
 import me.blin4ik322.luckychests.modules.WorldBorderTimer;
 import me.blin4ik322.luckychests.modules.worldbordertimer.EventCommand;
@@ -47,6 +48,9 @@ public final class LuckyChests extends JavaPlugin {
         EventCommand eventCommand = new EventCommand(worldBorderTimer);
         getCommand("event").setExecutor(eventCommand);
         getCommand("event").setTabCompleter(eventCommand);
+
+        // Модуль "Вложения": виртуальный сундук /invest (/вложить), очки идут в клан игрока.
+        new InvestModule(this, clanManager).enable();
 
         getLogger().info("LuckyChests успешно запущен!");
     }

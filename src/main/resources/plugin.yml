@@ -3,7 +3,7 @@ main: me.blin4ik322.luckychests.LuckyChests
 version: '1.0'
 api-version: '1.20'
 author: blin4ik322
-description: LuckyChests - лут-сундуки + модули AutoMelter, ExpBoost, WitherBoost и Кланы
+description: LuckyChests - лут-сундуки + модули AutoMelter, ExpBoost, WitherBoost, Кланы и Вложения
 
 commands:
   melt:
@@ -33,6 +33,10 @@ commands:
     usage: /event <start <время> <радиус>|stop>
     aliases: [ивент, барьер]
     permission: luckychests.event
+  invest:
+    description: Меню вложений (виртуальный сундук) + управление ценником предметов. Открытие меню доступно всем игрокам.
+    usage: /invest [add <предмет> <очки>|remove <предмет>|list]
+    aliases: [вложить]
 
 permissions:
   luckychests.expboost:
@@ -46,4 +50,7 @@ permissions:
     default: op
   luckychests.event:
     description: Доступ к команде /event (запуск/остановка сужения барьера мира)
+    default: op
+  luckychests.invest.admin:
+    description: Доступ к /invest add|remove|list (настройка ценника вложений)
     default: op

@@ -2,6 +2,7 @@ package me.blin4ik322.luckychests.modules;
 
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.WorldBorder;
 import org.bukkit.entity.Player;
@@ -52,6 +53,14 @@ public class WorldBorderTimer implements Listener {
             ChatColor.DARK_AQUA + "" + ChatColor.RESET,
             ChatColor.DARK_RED + "" + ChatColor.RESET
     };
+
+    // Насколько "жёстко" ведёт себя граница для тех, кого она застала снаружи.
+    // damageAmount/damageBuffer — стандартные ванильные значения (0.2 урона за
+    // блок за границей в секунду, буфер 5 блоков без урона). Их можно менять.
+    private static final double DAMAGE_AMOUNT = 0.2;
+    private static final double DAMAGE_BUFFER = 5.0;
+    // На сколько блоков внутрь от текущей границы отталкивать застигнутого игрока.
+    private static final double PUSHBACK_MARGIN = 1.0;
 
     private final JavaPlugin plugin;
 
@@ -113,6 +122,9 @@ public class WorldBorderTimer implements Listener {
         this.endMillis = startMillis + durationSeconds * 1000L;
 
         border.setSize(targetDiameter, durationSeconds);
+        // Урон за нахождение снаружи барьера, как в ваниле (можно подкрутить значения выше).
+        border.setDamageAmount(DAMAGE_AMOUNT);
+        border.setDamageBuffer(DAMAGE_BUFFER);
 
         setupScoreboard();
         for (Player player : Bukkit.getOnlinePlayers()) {
@@ -181,6 +193,8 @@ public class WorldBorderTimer implements Listener {
             return;
         }
 
+        pushStragglersInside();
+
         long remainingSeconds = Math.max(0, (endMillis - now) / 1000L);
         long currentRadius = Math.round(currentDiameter() / 2.0);
 
@@ -189,6 +203,46 @@ public class WorldBorderTimer implements Listener {
         lines[2].setPrefix(""); // разделитель
         lines[3].setPrefix(ChatColor.GRAY + "Радиус:");
         lines[4].setPrefix(ChatColor.WHITE + "" + ChatColor.BOLD + currentRadius + "бл");
+    }
+
+    /**
+     * Барьер стягивается сам по себе, и если игрок стоит на месте, граница может
+     * "проехать" мимо него — ванильная коллизия блокирует только попытки шагнуть
+     * за барьер, а не выталкивает того, кого уже настигла сжимающаяся граница.
+     * Раз в секунду проверяем всех игроков в мире события и отталкиваем внутрь
+     * тех, кто оказался снаружи текущей (анимированной) границы.
+     */
+    private void pushStragglersInside() {
+        if (world == null) {
+            return;
+        }
+
+        WorldBorder border = world.getWorldBorder();
+        Location center = border.getCenter();
+        double safeRadius = Math.max(0.0, currentDiameter() / 2.0 - PUSHBACK_MARGIN);
+
+        for (Player player : world.getPlayers()) {
+            Location loc = player.getLocation();
+            if (border.isInside(loc)) {
+                continue;
+            }
+
+            double dx = loc.getX() - center.getX();
+            double dz = loc.getZ() - center.getZ();
+            double distance = Math.sqrt(dx * dx + dz * dz);
+            if (distance < 0.001) {
+                continue; // игрок ровно в центре — деление на 0, но такого снаружи не бывает
+            }
+
+            double scale = safeRadius / distance;
+            double newX = center.getX() + dx * scale;
+            double newZ = center.getZ() + dz * scale;
+            int safeY = world.getHighestBlockYAt((int) Math.floor(newX), (int) Math.floor(newZ)) + 1;
+
+            Location safeLocation = new Location(world, newX, safeY, newZ, loc.getYaw(), loc.getPitch());
+            player.teleport(safeLocation);
+            player.sendMessage(ChatColor.RED + "Барьер настиг тебя — тебя оттолкнуло внутрь!");
+        }
     }
 
     /** Линейно интерполированный ТЕКУЩИЙ диаметр барьера в данный момент времени. */
