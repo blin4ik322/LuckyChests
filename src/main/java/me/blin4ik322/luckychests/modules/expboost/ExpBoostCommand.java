@@ -7,6 +7,8 @@ import org.bukkit.command.CommandSender;
 
 /**
  * Обработчик команды /expboost (часть модуля expboost).
+ * Доступна только операторам сервера (см. проверку sender.isOp() ниже
+ * и permission "luckychests.expboost" в plugin.yml).
  *
  * Использование:
  *  /expboost           — показать текущий множитель и состояние
@@ -17,6 +19,12 @@ public class ExpBoostCommand implements CommandExecutor {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+        // Команда только для операторов.
+        if (!sender.isOp()) {
+            sender.sendMessage(ChatColor.RED + "У вас недостаточно прав для использования этой команды.");
+            return true;
+        }
+
         if (args.length == 0) {
             String status = ExpBoostModule.isEnabled() ? ChatColor.GREEN + "включено" : ChatColor.RED + "выключено";
             sender.sendMessage(ChatColor.YELLOW + "[ExpBoost] Текущий множитель: x"
