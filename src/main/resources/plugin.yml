@@ -1,11 +1,41 @@
 name: LuckyChests
-version: '1.1'
 main: me.blin4ik322.luckychests.LuckyChests
-api-version: '1.21'
+version: '1.0'
+api-version: '1.20'
+author: blin4ik322
+description: LuckyChests - лут-сундуки + модули AutoMelter, ExpBoost, WitherBoost и Кланы
+
 commands:
   melt:
-    description: Включает/выключает автоплавку руды
+    description: Включить/выключить автоплавку руды. Доступна всем игрокам.
+    usage: /melt
   плавить:
-    description: Включает/выключает автоплавку руды
+    description: Включить/выключить автоплавку руды (алиас). Доступна всем игрокам.
+    usage: /плавить
   expboost:
-    description: Включает/выключает увеличение опыта
+    description: Настроить множитель выпадающего опыта. Только для операторов.
+    usage: /expboost <множитель|off>
+    permission: luckychests.expboost
+  witherchance:
+    description: Настроить множитель шанса выпадения черепа визера. Только для операторов.
+    usage: /witherchance <множитель|off>
+    permission: luckychests.witherchance
+  clan:
+    description: Управление кланами (создание, вступление, лидерство, очки ClanScores и т.д.). Доступна всем игрокам.
+    usage: /clan <create|leave|disband|invite|accept|rename|leader|score> [аргументы]
+    aliases: [клан]
+  top:
+    description: Показать топ кланов по очкам (ClanScores). Доступна всем игрокам.
+    usage: /top
+    aliases: [топ, clantop]
+
+permissions:
+  luckychests.expboost:
+    description: Доступ к команде /expboost
+    default: op
+  luckychests.witherchance:
+    description: Доступ к команде /witherchance
+    default: op
+  luckychests.clan.score:
+    description: Доступ к команде /clan score (ручное начисление очков клану)
+    default: op
