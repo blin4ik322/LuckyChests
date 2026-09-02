@@ -8,11 +8,14 @@ import me.blin4ik322.luckychests.modules.core.ModuleManager;
 import me.blin4ik322.luckychests.modules.customwither.CustomWitherModule;
 import me.blin4ik322.luckychests.modules.expboost.ExpBoostModule;
 import me.blin4ik322.luckychests.modules.witherboost.WitherBoostModule;
+import me.blin4ik322.luckychests.modules.WorldBorderTimer;
+import me.blin4ik322.luckychests.modules.worldbordertimer.EventCommand;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public final class LuckyChests extends JavaPlugin {
 
     private ClanManager clanManager;
+    private WorldBorderTimer worldBorderTimer;
 
     @Override
     public void onEnable() {
@@ -37,6 +40,13 @@ public final class LuckyChests extends JavaPlugin {
         // Модуль "Адский Босяк": кастомный визер без звука спавна на весь сервер,
         // с градиентным именем и наградой 50 очков клану за убийство.
         new CustomWitherModule(this, clanManager).enable();
+
+        // Модуль WorldBorderTimer: сужение барьера мира по /event start|stop.
+        worldBorderTimer = new WorldBorderTimer(this);
+        worldBorderTimer.enable();
+        EventCommand eventCommand = new EventCommand(worldBorderTimer);
+        getCommand("event").setExecutor(eventCommand);
+        getCommand("event").setTabCompleter(eventCommand);
 
         getLogger().info("LuckyChests успешно запущен!");
     }

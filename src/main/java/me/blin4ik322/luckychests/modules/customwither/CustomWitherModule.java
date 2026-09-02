@@ -140,16 +140,16 @@ public class CustomWitherModule implements Listener {
      */
     private static String buildGradientName() {
         char[] chars = {
-                '◆', '◆', '◆', ' ',
+                '◆', ' ',
                 'А', 'д', 'с', 'к', 'и', 'й', ' ',
                 'Б', 'о', 'с', 'я', 'к', ' ',
-                '◆', '◆', '◆'
+                '◆'
         };
         String[] hex = {
-                "E43A96", "E3459E", "E24FA6", "E24FA6",
+                "E24FA6", "E24FA6",
                 "E158AD", "DF61B4", "DE69BB", "DC70C1", "DA78C7", "D87FCC", "D87FCC",
                 "D58DD6", "D493DA", "D29ADE", "D1A0E2", "D0A6E5", "D0A6E5",
-                "CFACE7", "CFB1EA", "CFB7EC"
+                "CFACE7"
         };
 
         StringBuilder builder = new StringBuilder();
