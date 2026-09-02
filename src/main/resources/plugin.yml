@@ -1,0 +1,11 @@
+name: LuckyChests
+version: '1.1'
+main: me.blin4ik322.luckychests.LuckyChests
+api-version: '1.21'
+commands:
+  melt:
+    description: Включает/выключает автоплавку руды
+  плавить:
+    description: Включает/выключает автоплавку руды
+  expboost:
+    description: Включает/выключает увеличение опыта
