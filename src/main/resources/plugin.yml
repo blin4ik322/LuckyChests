@@ -3,7 +3,7 @@ main: me.blin4ik322.luckychests.LuckyChests
 version: '1.0'
 api-version: '1.20'
 author: blin4ik322
-description: LuckyChests - лут-сундуки + модули AutoMelter, ExpBoost, WitherBoost, Кланы, Вложения, Награды за игроков и Путеводитель (/guide)
+description: LuckyChests - лут-сундуки + модули AutoMelter, ExpBoost, WitherBoost, PvpMode, Кланы, Вложения, Награды за игроков и Путеводитель (/guide)
 
 commands:
   guide:
@@ -49,6 +49,18 @@ commands:
     description: Показать список игроков, за убийство которых сейчас дают больше минимума. Доступна всем игрокам.
     usage: /bounties
     aliases: [награды]
+  broadcast:
+    description: Отправить объявление всем игрокам в чат
+    usage: /<command> <сообщение>
+    aliases: [ bcast ]
+    permission: server.announce
+    permission-message: У вас нет прав на использование этой команды.
+  announce:
+    description: Показать всем игрокам title/subtitle со звуком колокола
+    usage: /<command> "<title>" "<subtitle>" <секунды>s
+    permission: server.announce
+    permission-message: У вас нет прав на использование этой команды.
+
 
 permissions:
   luckychests.expboost:
@@ -68,4 +80,7 @@ permissions:
     default: op
   luckychests.playerbattle:
     description: Доступ к команде /playerbattle (настройка наград за убийство игроков)
+    default: op
+  luckychests.announce:
+    description: Доступ к командам объявлений (/bcast, /announce)
     default: op
