@@ -7,7 +7,9 @@ import me.blin4ik322.luckychests.modules.clans.ClanTopCommand;
 import me.blin4ik322.luckychests.modules.core.ModuleManager;
 import me.blin4ik322.luckychests.modules.customwither.CustomWitherModule;
 import me.blin4ik322.luckychests.modules.expboost.ExpBoostModule;
+import me.blin4ik322.luckychests.modules.guide.GuideModule;
 import me.blin4ik322.luckychests.modules.invest.InvestModule;
+import me.blin4ik322.luckychests.modules.playersbattle.PlayerBattleModule;
 import me.blin4ik322.luckychests.modules.witherboost.WitherBoostModule;
 import me.blin4ik322.luckychests.modules.WorldBorderTimer;
 import me.blin4ik322.luckychests.modules.worldbordertimer.EventCommand;
@@ -17,6 +19,7 @@ public final class LuckyChests extends JavaPlugin {
 
     private ClanManager clanManager;
     private WorldBorderTimer worldBorderTimer;
+    private PlayerBattleModule playerBattleModule;
 
     @Override
     public void onEnable() {
@@ -50,7 +53,20 @@ public final class LuckyChests extends JavaPlugin {
         getCommand("event").setTabCompleter(eventCommand);
 
         // Модуль "Вложения": виртуальный сундук /invest (/вложить), очки идут в клан игрока.
-        new InvestModule(this, clanManager).enable();
+        InvestModule investModule = new InvestModule(this, clanManager);
+        investModule.enable();
+
+        // Модуль "Путеводитель": /guide (/гайд, /help, /помощь) — общий обзор фич плагина,
+        // актуальный ценник /invest (читает его напрямую из InvestModule, без дублирования),
+        // визуальный показ рецепта тотема (GUI) и настоящая регистрация этого рецепта
+        // на верстаке сервера. Подключается после InvestModule, так как использует его ценник.
+        new GuideModule(this, investModule).enable();
+
+        // Модуль "Награды за игроков": динамическая награда клану за PvP-убийство,
+        // растёт со стриком убийств жертвы и сбрасывается после её смерти.
+        // Включается/настраивается командой /playerbattle, список — /bounties.
+        playerBattleModule = new PlayerBattleModule(this, clanManager);
+        playerBattleModule.enable();
 
         getLogger().info("LuckyChests успешно запущен!");
     }
@@ -61,6 +77,9 @@ public final class LuckyChests extends JavaPlugin {
             // Дополнительное сохранение на всякий случай — ClanManager и так
             // сохраняет данные после каждого изменения, но лишним не будет.
             clanManager.save();
+        }
+        if (playerBattleModule != null) {
+            playerBattleModule.save();
         }
         getLogger().info("LuckyChests выключен.");
     }
