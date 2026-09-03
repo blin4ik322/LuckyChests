@@ -1,6 +1,7 @@
 package me.blin4ik322.luckychests;
 
 import me.blin4ik322.luckychests.modules.announce.AnnounceModule;
+import me.blin4ik322.luckychests.modules.appleboost.AppleBoostModule;
 import me.blin4ik322.luckychests.modules.automelter.AutoMelterModule;
 import me.blin4ik322.luckychests.modules.clans.ClanCommand;
 import me.blin4ik322.luckychests.modules.clans.ClanManager;
@@ -32,7 +33,8 @@ public final class LuckyChests extends JavaPlugin {
                 new AutoMelterModule(),
                 new ExpBoostModule(),
                 new WitherBoostModule(),
-                new AnnounceModule()
+                new AnnounceModule(),
+                new AppleBoostModule()
         );
 
         // ── Кланы ───────────────────────────────────────────────────────────

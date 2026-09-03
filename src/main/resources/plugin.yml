@@ -60,7 +60,10 @@ commands:
     usage: /<command> "<title>" "<subtitle>" <секунды>s
     permission: server.announce
     permission-message: У вас нет прав на использование этой команды.
-
+  applechance:
+    description: "Управление множителем выпадения яблок"
+    usage: "/applechance <множитель | off>"
+    aliases: [ ac ]
 
 permissions:
   luckychests.expboost:
