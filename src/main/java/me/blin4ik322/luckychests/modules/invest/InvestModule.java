@@ -27,7 +27,11 @@ import java.util.Map;
  * очков за уже положенные предметы из ценника (ценник задаётся операторами
  * командой /invest add {предмет} {очки}). Последний, 54-й слот всегда занят
  * кнопкой-подтверждением (лаймовый краситель, жирная зелёная надпись
- * "Подтвердить") — его нельзя вынуть или заменить.
+ * "Подтвердить") — его нельзя вынуть или заменить. Слева снизу (45-й слот)
+ * — кнопка "Что можно продавать?" (оранжевый краситель): открывает
+ * отдельный read-only сундук-ценник со всеми предметами из ценника и их
+ * ценой в описании, а в нём на той же позиции — кнопка "Назад" обратно
+ * к вложениям.
  *
  * Два сценария:
  *  - Игрок нажимает на кнопку "Подтвердить" — предметы, которые ЕСТЬ в
@@ -50,6 +54,12 @@ public class InvestModule {
 
     /** Последний слот сундука — всегда кнопка "Подтвердить", в расчёт очков и продажу не входит. */
     public static final int CONFIRM_SLOT = INVENTORY_SIZE - 1;
+
+    /** Слева снизу в сундуке вложений — кнопка "Что можно продавать?" (открывает ценник). */
+    public static final int SELL_INFO_SLOT = INVENTORY_SIZE - 9;
+
+    /** В GUI ценника — та же позиция (слева снизу) занята кнопкой "Назад". */
+    public static final int PRICE_LIST_BACK_SLOT = INVENTORY_SIZE - 9;
 
     private final JavaPlugin plugin;
     private final ClanManager clanManager;
@@ -88,6 +98,7 @@ public class InvestModule {
     public void openMenu(Player player) {
         Inventory inventory = Bukkit.createInventory(new InvestHolder(), INVENTORY_SIZE, buildTitle(0));
         inventory.setItem(CONFIRM_SLOT, buildConfirmButton());
+        inventory.setItem(SELL_INFO_SLOT, buildSellInfoButton());
         player.openInventory(inventory);
     }
 
@@ -109,12 +120,88 @@ public class InvestModule {
         return item;
     }
 
+    private ItemStack buildSellInfoButton() {
+        ItemStack item = new ItemStack(Material.ORANGE_DYE);
+        ItemMeta meta = item.getItemMeta();
+        if (meta != null) {
+            meta.setDisplayName(ChatColor.GOLD + "" + ChatColor.BOLD + "Что можно продавать?");
+            meta.setLore(Collections.singletonList(
+                    ChatColor.GRAY + "Нажми, чтобы посмотреть ценник"));
+            item.setItemMeta(meta);
+        }
+        return item;
+    }
+
+    /**
+     * Открывает игроку read-only сундук-ценник: все предметы из
+     * {@link #itemValues} с их ценой в описании, и кнопка "Назад" (слева
+     * снизу), возвращающая в сундук вложений.
+     */
+    public void openPriceList(Player player) {
+        Inventory inventory = Bukkit.createInventory(new InvestPriceListHolder(), INVENTORY_SIZE,
+                ChatColor.GOLD + "" + ChatColor.BOLD + "Что можно продавать?");
+
+        ItemStack glass = buildBackgroundGlass();
+        for (int i = 0; i < inventory.getSize(); i++) {
+            inventory.setItem(i, glass);
+        }
+
+        int slot = 0;
+        for (Map.Entry<Material, Integer> entry : itemValues.entrySet()) {
+            if (slot == PRICE_LIST_BACK_SLOT) {
+                slot++; // не занимаем слот кнопки "Назад" товарами
+            }
+            if (slot >= INVENTORY_SIZE) {
+                break; // ценник больше не помещается в один сундук
+            }
+            inventory.setItem(slot, buildPriceIcon(entry.getKey(), entry.getValue()));
+            slot++;
+        }
+
+        inventory.setItem(PRICE_LIST_BACK_SLOT, buildBackButton());
+        player.openInventory(inventory);
+    }
+
+    private ItemStack buildBackgroundGlass() {
+        ItemStack pane = new ItemStack(Material.GRAY_STAINED_GLASS_PANE);
+        ItemMeta meta = pane.getItemMeta();
+        if (meta != null) {
+            meta.setDisplayName(" ");
+            pane.setItemMeta(meta);
+        }
+        return pane;
+    }
+
+    private ItemStack buildPriceIcon(Material material, int price) {
+        ItemStack icon = new ItemStack(material, 1);
+        ItemMeta meta = icon.getItemMeta();
+        if (meta != null) {
+            meta.setDisplayName(ChatColor.WHITE + material.name());
+            meta.setLore(Collections.singletonList(
+                    ChatColor.GRAY + "Цена: " + ChatColor.YELLOW + price + ChatColor.GRAY + " очков/шт."));
+            icon.setItemMeta(meta);
+        }
+        return icon;
+    }
+
+    private ItemStack buildBackButton() {
+        ItemStack item = new ItemStack(Material.ARROW);
+        ItemMeta meta = item.getItemMeta();
+        if (meta != null) {
+            meta.setDisplayName(ChatColor.RED + "" + ChatColor.BOLD + "Назад");
+            meta.setLore(Collections.singletonList(
+                    ChatColor.GRAY + "Вернуться к сундуку вложений"));
+            item.setItemMeta(meta);
+        }
+        return item;
+    }
+
     /** Считает сумму очков по предметам из ценника, лежащим в инвентаре прямо сейчас (кнопка не учитывается). */
     public int calculatePoints(Inventory inventory) {
         int total = 0;
         ItemStack[] contents = inventory.getContents();
         for (int i = 0; i < contents.length; i++) {
-            if (i == CONFIRM_SLOT) {
+            if (i == CONFIRM_SLOT || i == SELL_INFO_SLOT) {
                 continue;
             }
             ItemStack item = contents[i];
@@ -141,7 +228,7 @@ public class InvestModule {
         ItemStack[] contents = inventory.getContents();
 
         for (int i = 0; i < contents.length; i++) {
-            if (i == CONFIRM_SLOT) {
+            if (i == CONFIRM_SLOT || i == SELL_INFO_SLOT) {
                 continue;
             }
             ItemStack item = contents[i];
@@ -168,7 +255,7 @@ public class InvestModule {
     public void returnItems(Player player, Inventory inventory) {
         ItemStack[] contents = inventory.getContents();
         for (int i = 0; i < contents.length; i++) {
-            if (i == CONFIRM_SLOT) {
+            if (i == CONFIRM_SLOT || i == SELL_INFO_SLOT) {
                 continue;
             }
             ItemStack item = contents[i];
