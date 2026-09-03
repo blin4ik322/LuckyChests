@@ -8,6 +8,9 @@ import me.blin4ik322.luckychests.modules.clans.ClanManager;
 import me.blin4ik322.luckychests.modules.clans.ClanTopCommand;
 import me.blin4ik322.luckychests.modules.core.ModuleManager;
 import me.blin4ik322.luckychests.modules.customwither.CustomWitherModule;
+import me.blin4ik322.luckychests.modules.enemypotion.EnemyPotionCommand;
+import me.blin4ik322.luckychests.modules.enemypotion.EnemyPotionListener;
+import me.blin4ik322.luckychests.modules.enemypotion.EnemyPotionModule;
 import me.blin4ik322.luckychests.modules.expboost.ExpBoostModule;
 import me.blin4ik322.luckychests.modules.guide.GuideModule;
 import me.blin4ik322.luckychests.modules.invest.InvestModule;
@@ -18,6 +21,7 @@ import me.blin4ik322.luckychests.modules.pvpmode.PvpTimerManager;
 import me.blin4ik322.luckychests.modules.witherboost.WitherBoostModule;
 import me.blin4ik322.luckychests.modules.WorldBorderTimer;
 import me.blin4ik322.luckychests.modules.worldbordertimer.EventCommand;
+import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public final class LuckyChests extends JavaPlugin {
@@ -25,7 +29,7 @@ public final class LuckyChests extends JavaPlugin {
     private ClanManager clanManager;
     private WorldBorderTimer worldBorderTimer;
     private PlayerBattleModule playerBattleModule;
-
+    private EnemyPotionModule enemyPotionModule;
     @Override
     public void onEnable() {
         // ── Модули без зависимостей ──────────────────────────────────────────
@@ -89,6 +93,17 @@ public final class LuckyChests extends JavaPlugin {
         playerBattleModule = new PlayerBattleModule(this, clanManager);
         playerBattleModule.enable();
 
+
+        enemyPotionModule = new EnemyPotionModule(this, clanManager);
+        Bukkit.getPluginManager().registerEvents(new EnemyPotionListener(enemyPotionModule), this);
+
+        EnemyPotionCommand radarCommand = new EnemyPotionCommand(enemyPotionModule);
+        getCommand("giveradarpotion").setExecutor(radarCommand);
+        getCommand("giveradarpotion").setTabCompleter(radarCommand);
+
+        enemyPotionModule.startTask(this);
+
+
         getLogger().info("LuckyChests успешно запущен!");
     }
 
@@ -101,6 +116,9 @@ public final class LuckyChests extends JavaPlugin {
         }
         if (playerBattleModule != null) {
             playerBattleModule.save();
+        }
+        if (enemyPotionModule != null) {
+            enemyPotionModule.stopTask(); // сам таск.cancel() + activeRadars.clear()
         }
         getLogger().info("LuckyChests выключен.");
     }

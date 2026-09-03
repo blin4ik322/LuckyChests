@@ -37,7 +37,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 public class CustomWitherModule implements Listener {
 
     /** Сколько очков ClanScores получает клан игрока за убийство Адского Босяка. */
-    public static final long KILL_REWARD = 50L;
+    public static final long KILL_REWARD = 400L;
 
     /** Как выглядит визер над головой — "/// Адский Босяк \\\" с розово-фиолетовым градиентом. */
     private static final String CUSTOM_NAME = buildGradientName();

@@ -64,6 +64,10 @@ commands:
     description: "Управление множителем выпадения яблок"
     usage: "/applechance <множитель | off>"
     aliases: [ ac ]
+  giveradarpotion:
+    description: Выдать Зелье Чутья Врагов
+    usage: /giveradarpotion <игрок>
+    permission: luckychests.admin
 
 permissions:
   luckychests.expboost:
@@ -86,4 +90,7 @@ permissions:
     default: op
   luckychests.announce:
     description: Доступ к командам объявлений (/bcast, /announce)
+    default: op
+  luckychests.admin:
+    description: Доступ ко всем административным командам LuckyChests
     default: op
