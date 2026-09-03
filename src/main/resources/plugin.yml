@@ -68,6 +68,10 @@ commands:
     description: Выдать Зелье Чутья Врагов
     usage: /giveradarpotion <игрок>
     permission: luckychests.admin
+  shop:
+    description: Магазин предметов за очки клана
+    usage: /shop
+    aliases: [ магазин, store ]
 
 permissions:
   luckychests.expboost:

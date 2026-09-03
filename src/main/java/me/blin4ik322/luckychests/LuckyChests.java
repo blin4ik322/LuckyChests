@@ -18,6 +18,9 @@ import me.blin4ik322.luckychests.modules.playersbattle.PlayerBattleModule;
 import me.blin4ik322.luckychests.modules.pvpmode.PvpCombatListener;
 import me.blin4ik322.luckychests.modules.pvpmode.PvpModeModule;
 import me.blin4ik322.luckychests.modules.pvpmode.PvpTimerManager;
+import me.blin4ik322.luckychests.modules.shop.ShopCommand;
+import me.blin4ik322.luckychests.modules.shop.ShopListener;
+import me.blin4ik322.luckychests.modules.shop.ShopModule;
 import me.blin4ik322.luckychests.modules.witherboost.WitherBoostModule;
 import me.blin4ik322.luckychests.modules.WorldBorderTimer;
 import me.blin4ik322.luckychests.modules.worldbordertimer.EventCommand;
@@ -27,9 +30,13 @@ import org.bukkit.plugin.java.JavaPlugin;
 public final class LuckyChests extends JavaPlugin {
 
     private ClanManager clanManager;
+    private ShopModule shopModule;
     private WorldBorderTimer worldBorderTimer;
     private PlayerBattleModule playerBattleModule;
     private EnemyPotionModule enemyPotionModule;
+
+
+
     @Override
     public void onEnable() {
         // ── Модули без зависимостей ──────────────────────────────────────────
@@ -103,6 +110,19 @@ public final class LuckyChests extends JavaPlugin {
 
         enemyPotionModule.startTask(this);
 
+        // ── Магазин ──────────────────────────────────────────────────────────
+        // /shop (/магазин, /store) — тратим очки клана на предметы.
+        // Создаётся здесь, а не полем класса, чтобы clanManager был уже
+        // не null (иначе NPE внутри ShopModule/ShopListener).
+        shopModule = new ShopModule(this, clanManager);
+
+        getServer().getPluginManager().registerEvents(new ShopListener(this, shopModule), this);
+
+        if (getCommand("shop") != null) {
+            getCommand("shop").setExecutor(new ShopCommand(shopModule));
+        } else {
+            getLogger().warning("[Shop] команда 'shop' не объявлена в plugin.yml — добавьте её.");
+        }
 
         getLogger().info("LuckyChests успешно запущен!");
     }
