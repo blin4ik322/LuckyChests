@@ -3,6 +3,7 @@ package me.blin4ik322.luckychests.modules.shop;
 import me.blin4ik322.luckychests.modules.clans.Clan;
 import me.blin4ik322.luckychests.modules.clans.ClanManager;
 import me.blin4ik322.luckychests.modules.enemypotion.EnemyPotionModule;
+import me.blin4ik322.luckychests.modules.meteorite.MeteoriteModule;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
@@ -25,12 +26,14 @@ public class ShopModule {
 
     private final ClanManager clanManager;
     private final EnemyPotionModule enemyPotionModule;
+    private final MeteoriteModule meteoriteModule;
 
     private final NamespacedKey keyPrice;
     private final NamespacedKey keyAmount;
     private final NamespacedKey keyItemId;
 
-    public ShopModule(JavaPlugin plugin, ClanManager clanManager, EnemyPotionModule enemyPotionModule) {
+    public ShopModule(JavaPlugin plugin, ClanManager clanManager, EnemyPotionModule enemyPotionModule,
+                      MeteoriteModule meteoriteModule) {
         if (clanManager == null) {
             throw new IllegalArgumentException(
                     "[Shop] ClanManager == null. Убедитесь, что ShopModule создаётся "
@@ -44,8 +47,16 @@ public class ShopModule {
                             + "передан тот же самый экземпляр EnemyPotionModule (нужен для "
                             + "выдачи настоящего Зелья Чутья Врагов при покупке в магазине).");
         }
+        if (meteoriteModule == null) {
+            throw new IllegalArgumentException(
+                    "[Shop] MeteoriteModule == null. Убедитесь, что ShopModule создаётся "
+                            + "ПОСЛЕ инициализации MeteoriteModule в onEnable() и что туда "
+                            + "передан тот же самый экземпляр MeteoriteModule (нужен для "
+                            + "выдачи настоящих \"Фрiкадэлек\" при покупке в магазине).");
+        }
         this.clanManager = clanManager;
         this.enemyPotionModule = enemyPotionModule;
+        this.meteoriteModule = meteoriteModule;
         this.keyPrice = new NamespacedKey(plugin, "shop_price");
         this.keyAmount = new NamespacedKey(plugin, "shop_amount");
         this.keyItemId = new NamespacedKey(plugin, "shop_item_id");
@@ -62,6 +73,14 @@ public class ShopModule {
      */
     public EnemyPotionModule getEnemyPotionModule() {
         return enemyPotionModule;
+    }
+
+    /**
+     * Используется ShopListener для выдачи настоящих "Фрiкадэлек" (со своей
+     * PDC-меткой и glint-эффектом) при покупке ShopItem.METEORITE_ITEM.
+     */
+    public MeteoriteModule getMeteoriteModule() {
+        return meteoriteModule;
     }
 
     public NamespacedKey getKeyPrice() {
@@ -129,9 +148,14 @@ public class ShopModule {
         // из EnemyPotionModule (с его именем/лором), а не обычный ItemStack по
         // материалу — так иконка в магазине выглядит так же, как и предмет,
         // который игрок реально получит при покупке.
-        ItemStack icon = shopItem == ShopItem.ENEMY_RADAR_POTION
-                ? enemyPotionModule.getRadarPotion()
-                : new ItemStack(shopItem.getMaterial(), shopItem.getAmount());
+        ItemStack icon;
+        if (shopItem == ShopItem.ENEMY_RADAR_POTION) {
+            icon = enemyPotionModule.getRadarPotion();
+        } else if (shopItem == ShopItem.METEORITE_ITEM) {
+            icon = meteoriteModule.getMeteoriteItem();
+        } else {
+            icon = new ItemStack(shopItem.getMaterial(), shopItem.getAmount());
+        }
 
         ItemMeta meta = icon.getItemMeta();
         if (meta != null) {

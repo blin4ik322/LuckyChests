@@ -40,10 +40,12 @@ public class MeteoriteModule {
     private static final int COUNTDOWN_SECONDS = 5;
     private static final double RADIUS = 20.0;
     private static final double SPAWN_HEIGHT = 30.0;
-    private static final int MIN_METEORS = 3;
-    private static final int MAX_METEORS = 7;
-    private static final float MIN_POWER = 4f;
-    private static final float MAX_POWER = 9f;
+    private static final int MIN_METEORS = 10;
+    private static final int MAX_METEORS = 15;
+    private static final float MIN_POWER = 2f;
+    private static final float MAX_POWER = 4f;
+    private static final int MIN_TICKS_BETWEEN_SPAWN = 4;
+    private static final int MAX_TICKS_BETWEEN_SPAWN = 8;
 
     private final JavaPlugin plugin;
     private final NamespacedKey meteoriteKey;
@@ -146,7 +148,7 @@ public class MeteoriteModule {
     }
 
     private void broadcastImpact(Location origin) {
-        Component subtitle = Component.text("МЕТЕОРИТЫ!", NamedTextColor.RED, TextDecoration.BOLD);
+        Component subtitle = Component.text("ФРІКАДЭЛЬКИ!", NamedTextColor.RED, TextDecoration.BOLD);
         Title title = Title.title(Component.empty(), subtitle,
                 Title.Times.times(Duration.ZERO, Duration.ofMillis(700), Duration.ofMillis(300)));
 
@@ -187,7 +189,7 @@ public class MeteoriteModule {
         long delayTicks = 0L;
         for (int i = 0; i < count; i++) {
             // 200мс = 4 тика, 1.5с = 30 тиков.
-            delayTicks += random.nextInt(4, 31);
+            delayTicks += random.nextInt(MIN_TICKS_BETWEEN_SPAWN, MAX_TICKS_BETWEEN_SPAWN);
 
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
                 double angle = random.nextDouble(0, Math.PI * 2);
@@ -203,7 +205,7 @@ public class MeteoriteModule {
                     fireball.setGravity(true);
                     // Начальный импульс вниз — дальше метеорит ускоряется гравитацией,
                     // как настоящий падающий объект, а не как обычный огненный шар.
-                    fireball.setVelocity(new Vector(0, -0.8, 0));
+                    fireball.setVelocity(new Vector(0, random.nextInt(-5, -2), 0));
                 });
             }, delayTicks);
         }

@@ -117,6 +117,8 @@ public class ShopListener implements Listener {
         // предмет из магазина выглядел бы как зелье, но не работал бы как радар.
         ItemStack purchase = shopItem == ShopItem.ENEMY_RADAR_POTION
                 ? shopModule.getEnemyPotionModule().getRadarPotion()
+                : shopItem == ShopItem.METEORITE_ITEM
+                ? shopModule.getMeteoriteModule().getMeteoriteItem()
                 : new ItemStack(shopItem.getMaterial(), shopItem.getAmount());
 
         // Предварительная проверка места — не трогаем реальный инвентарь

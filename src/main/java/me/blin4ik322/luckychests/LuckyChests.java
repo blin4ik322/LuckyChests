@@ -37,7 +37,7 @@ public final class LuckyChests extends JavaPlugin {
     private WorldBorderTimer worldBorderTimer;
     private PlayerBattleModule playerBattleModule;
     private EnemyPotionModule enemyPotionModule;
-
+    private MeteoriteModule meteoriteModule;
 
 
     @Override
@@ -113,13 +113,21 @@ public final class LuckyChests extends JavaPlugin {
 
         enemyPotionModule.startTask(this);
 
+        // ── Метеоритный дождь ────────────────────────────────────────────────
+        // Создаём здесь, ДО ShopModule — магазину нужен готовый meteoriteModule,
+        // чтобы при покупке выдавать настоящую "Фрiкадэльку", а не «пустышку».
+        meteoriteModule = new MeteoriteModule(this);
+        getServer().getPluginManager().registerEvents(new MeteoriteListener(meteoriteModule), this);
+        getCommand("givemeteorite").setExecutor(new MeteoriteCommand(meteoriteModule));
+
         // ── Магазин ──────────────────────────────────────────────────────────
         // /shop (/магазин, /store) — тратим очки клана на предметы.
-        // Создаётся здесь, а не полем класса, чтобы clanManager и enemyPotionModule
-        // были уже не null (иначе NPE внутри ShopModule/ShopListener). enemyPotionModule
-        // нужен магазину, чтобы при покупке Зелья Чутья Врагов выдавать настоящий
-        // предмет модуля, а не «пустышку».
-        shopModule = new ShopModule(this, clanManager, enemyPotionModule);
+        // Создаётся здесь, а не полем класса, чтобы clanManager, enemyPotionModule
+        // и meteoriteModule были уже не null (иначе NPE внутри ShopModule/ShopListener).
+        // enemyPotionModule нужен магазину, чтобы при покупке Зелья Чутья Врагов
+        // выдавать настоящий предмет модуля, а не «пустышку»; meteoriteModule — то же
+        // самое для "Фрiкадэльки".
+        shopModule = new ShopModule(this, clanManager, enemyPotionModule, meteoriteModule);
 
         getServer().getPluginManager().registerEvents(new ShopListener(this, shopModule), this);
 
@@ -128,11 +136,6 @@ public final class LuckyChests extends JavaPlugin {
         } else {
             getLogger().warning("[Shop] команда 'shop' не объявлена в plugin.yml — добавьте её.");
         }
-
-
-        MeteoriteModule meteoriteModule = new MeteoriteModule(this);
-        getServer().getPluginManager().registerEvents(new MeteoriteListener(meteoriteModule), this);
-        getCommand("givemeteorite").setExecutor(new MeteoriteCommand(meteoriteModule));
 
         getLogger().info("LuckyChests успешно запущен!");
     }

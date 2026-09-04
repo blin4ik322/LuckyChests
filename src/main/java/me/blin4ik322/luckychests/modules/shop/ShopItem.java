@@ -30,7 +30,9 @@ public enum ShopItem {
     IRON_INGOT(39, Material.IRON_INGOT, 1, 10, "§fЖелезный слиток"),
     DIAMOND(40, Material.DIAMOND, 1, 80, "§bАлмаз"),
     LAPIS_LAZULI(41, Material.LAPIS_LAZULI, 16, 100, "§9Лазурит"),
-    LAVA_BUCKET(42, Material.LAVA_BUCKET, 1, 70, "§6Ведро лавы");
+    LAVA_BUCKET(42, Material.LAVA_BUCKET, 1, 70, "§6Ведро лавы"),
+
+    METEORITE_ITEM(49, Material.POPPED_CHORUS_FRUIT, 1, 300, "§4Фрiкадэльки");
 
     private final int slot;
     private final Material material;
