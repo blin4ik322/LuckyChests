@@ -14,6 +14,9 @@ import me.blin4ik322.luckychests.modules.enemypotion.EnemyPotionModule;
 import me.blin4ik322.luckychests.modules.expboost.ExpBoostModule;
 import me.blin4ik322.luckychests.modules.guide.GuideModule;
 import me.blin4ik322.luckychests.modules.invest.InvestModule;
+import me.blin4ik322.luckychests.modules.meteorite.MeteoriteCommand;
+import me.blin4ik322.luckychests.modules.meteorite.MeteoriteListener;
+import me.blin4ik322.luckychests.modules.meteorite.MeteoriteModule;
 import me.blin4ik322.luckychests.modules.playersbattle.PlayerBattleModule;
 import me.blin4ik322.luckychests.modules.pvpmode.PvpCombatListener;
 import me.blin4ik322.luckychests.modules.pvpmode.PvpModeModule;
@@ -112,9 +115,11 @@ public final class LuckyChests extends JavaPlugin {
 
         // ── Магазин ──────────────────────────────────────────────────────────
         // /shop (/магазин, /store) — тратим очки клана на предметы.
-        // Создаётся здесь, а не полем класса, чтобы clanManager был уже
-        // не null (иначе NPE внутри ShopModule/ShopListener).
-        shopModule = new ShopModule(this, clanManager);
+        // Создаётся здесь, а не полем класса, чтобы clanManager и enemyPotionModule
+        // были уже не null (иначе NPE внутри ShopModule/ShopListener). enemyPotionModule
+        // нужен магазину, чтобы при покупке Зелья Чутья Врагов выдавать настоящий
+        // предмет модуля, а не «пустышку».
+        shopModule = new ShopModule(this, clanManager, enemyPotionModule);
 
         getServer().getPluginManager().registerEvents(new ShopListener(this, shopModule), this);
 
@@ -123,6 +128,11 @@ public final class LuckyChests extends JavaPlugin {
         } else {
             getLogger().warning("[Shop] команда 'shop' не объявлена в plugin.yml — добавьте её.");
         }
+
+
+        MeteoriteModule meteoriteModule = new MeteoriteModule(this);
+        getServer().getPluginManager().registerEvents(new MeteoriteListener(meteoriteModule), this);
+        getCommand("givemeteorite").setExecutor(new MeteoriteCommand(meteoriteModule));
 
         getLogger().info("LuckyChests успешно запущен!");
     }

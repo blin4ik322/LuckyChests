@@ -72,6 +72,10 @@ commands:
     description: Магазин предметов за очки клана
     usage: /shop
     aliases: [ магазин, store ]
+  givemeteorite:
+    description: Выдаёт игроку "Фрiкадэльки"
+    usage: /givemeteorite <игрок>
+    permission: luckychests.admin
 
 permissions:
   luckychests.expboost:

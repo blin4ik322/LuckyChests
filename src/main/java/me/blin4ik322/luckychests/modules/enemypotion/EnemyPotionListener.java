@@ -33,7 +33,7 @@ public class EnemyPotionListener implements Listener {
         module.activateRadar(player);
         player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.0f);
 
-        Component message = Component.text("Радар активирован на 5 минут!", NamedTextColor.GREEN);
+        Component message = Component.text("Радар активирован на 3 минуты!", NamedTextColor.GREEN);
         player.sendMessage(message);
     }
 }

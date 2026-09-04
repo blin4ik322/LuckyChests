@@ -2,6 +2,7 @@ package me.blin4ik322.luckychests.modules.shop;
 
 import me.blin4ik322.luckychests.modules.clans.Clan;
 import me.blin4ik322.luckychests.modules.clans.ClanManager;
+import me.blin4ik322.luckychests.modules.enemypotion.EnemyPotionModule;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
@@ -23,19 +24,28 @@ import java.util.List;
 public class ShopModule {
 
     private final ClanManager clanManager;
+    private final EnemyPotionModule enemyPotionModule;
 
     private final NamespacedKey keyPrice;
     private final NamespacedKey keyAmount;
     private final NamespacedKey keyItemId;
 
-    public ShopModule(JavaPlugin plugin, ClanManager clanManager) {
+    public ShopModule(JavaPlugin plugin, ClanManager clanManager, EnemyPotionModule enemyPotionModule) {
         if (clanManager == null) {
             throw new IllegalArgumentException(
                     "[Shop] ClanManager == null. Убедитесь, что ShopModule создаётся "
                             + "ПОСЛЕ инициализации ClanManager в onEnable() и что туда "
                             + "передан тот же самый экземпляр ClanManager.");
         }
+        if (enemyPotionModule == null) {
+            throw new IllegalArgumentException(
+                    "[Shop] EnemyPotionModule == null. Убедитесь, что ShopModule создаётся "
+                            + "ПОСЛЕ инициализации EnemyPotionModule в onEnable() и что туда "
+                            + "передан тот же самый экземпляр EnemyPotionModule (нужен для "
+                            + "выдачи настоящего Зелья Чутья Врагов при покупке в магазине).");
+        }
         this.clanManager = clanManager;
+        this.enemyPotionModule = enemyPotionModule;
         this.keyPrice = new NamespacedKey(plugin, "shop_price");
         this.keyAmount = new NamespacedKey(plugin, "shop_amount");
         this.keyItemId = new NamespacedKey(plugin, "shop_item_id");
@@ -43,6 +53,15 @@ public class ShopModule {
 
     public ClanManager getClanManager() {
         return clanManager;
+    }
+
+    /**
+     * Используется ShopListener для выдачи настоящего "Зелья Чутья Врагов"
+     * (со своей PDC-меткой и Adventure-лором) при покупке ShopItem.ENEMY_RADAR_POTION,
+     * вместо обычного ItemStack по материалу/количеству.
+     */
+    public EnemyPotionModule getEnemyPotionModule() {
+        return enemyPotionModule;
     }
 
     public NamespacedKey getKeyPrice() {
@@ -106,7 +125,14 @@ public class ShopModule {
     }
 
     private ItemStack createShopIcon(ShopItem shopItem) {
-        ItemStack icon = new ItemStack(shopItem.getMaterial(), shopItem.getAmount());
+        // ENEMY_RADAR_POTION — особый случай: берём за основу настоящий предмет
+        // из EnemyPotionModule (с его именем/лором), а не обычный ItemStack по
+        // материалу — так иконка в магазине выглядит так же, как и предмет,
+        // который игрок реально получит при покупке.
+        ItemStack icon = shopItem == ShopItem.ENEMY_RADAR_POTION
+                ? enemyPotionModule.getRadarPotion()
+                : new ItemStack(shopItem.getMaterial(), shopItem.getAmount());
+
         ItemMeta meta = icon.getItemMeta();
         if (meta != null) {
             meta.setDisplayName(shopItem.getDisplayName());

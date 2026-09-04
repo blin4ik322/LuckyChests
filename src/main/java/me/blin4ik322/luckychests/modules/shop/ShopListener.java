@@ -111,7 +111,13 @@ public class ShopListener implements Listener {
             return;
         }
 
-        ItemStack purchase = new ItemStack(shopItem.getMaterial(), shopItem.getAmount());
+        // ENEMY_RADAR_POTION — особый случай: выдаём не «сырой» ItemStack по
+        // материалу/количеству, а настоящее Зелье Чутья Врагов из
+        // EnemyPotionModule, со своей PDC-меткой и Adventure-лором — иначе
+        // предмет из магазина выглядел бы как зелье, но не работал бы как радар.
+        ItemStack purchase = shopItem == ShopItem.ENEMY_RADAR_POTION
+                ? shopModule.getEnemyPotionModule().getRadarPotion()
+                : new ItemStack(shopItem.getMaterial(), shopItem.getAmount());
 
         // Предварительная проверка места — не трогаем реальный инвентарь
         // игрока, пока не убедимся, что предмет точно поместится.
