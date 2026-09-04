@@ -237,6 +237,12 @@ public class GuideCommand implements CommandExecutor, TabCompleter {
         if (sender.hasPermission("luckychests.playerbattle")) {
             sender.sendMessage(ChatColor.DARK_GRAY + "/playerbattle" + ChatColor.GRAY + " — настройка наград за PvP (оператор)");
         }
+        if (sender.hasPermission("luckychests.clan.score")) {
+            sender.sendMessage(ChatColor.DARK_GRAY + "/clan score <клан> <кол-во>" + ChatColor.GRAY + " — начислить очки клану (оператор)");
+        }
+        if (sender.hasPermission("luckychests.clan.tp")) {
+            sender.sendMessage(ChatColor.DARK_GRAY + "/clan tp <клан>" + ChatColor.GRAY + " — телепортировать всех участников клана к себе (оператор)");
+        }
         if (sender.hasPermission("luckychests.admin")) {
             sender.sendMessage(ChatColor.DARK_GRAY + "/applechance" + ChatColor.GRAY + " — множитель шанса яблок (оператор)");
             sender.sendMessage(ChatColor.DARK_GRAY + "/giveradarpotion" + ChatColor.GRAY + " — выдать Зелье Чутья Врагов (оператор)");

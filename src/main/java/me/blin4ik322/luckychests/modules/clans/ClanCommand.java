@@ -28,11 +28,13 @@ import java.util.stream.Collectors;
  *  /clan leader {ник}           — передать лидерство участнику клана (только лидер)
  *  /clan score {клан} {кол-во} — начислить очки клану (ClanScores), только для op /
  *                                 luckychests.clan.score
+ *  /clan tp {клан}               — телепортировать ВСЕХ участников клана (онлайн)
+ *                                   к себе, только для op / luckychests.clan.tp
  */
 public class ClanCommand implements CommandExecutor, TabCompleter {
 
     private static final List<String> SUBCOMMANDS = Arrays.asList(
-            "create", "leave", "disband", "invite", "accept", "rename", "leader", "score"
+            "create", "leave", "disband", "invite", "accept", "rename", "leader", "score", "tp"
     );
 
     private final ClanManager manager;
@@ -79,6 +81,9 @@ public class ClanCommand implements CommandExecutor, TabCompleter {
             case "score":
                 handleScore(player, args);
                 break;
+            case "tp":
+                handleTp(player, args);
+                break;
             default:
                 sendUsage(player);
         }
@@ -97,6 +102,10 @@ public class ClanCommand implements CommandExecutor, TabCompleter {
         if (player.hasPermission("luckychests.clan.score")) {
             player.sendMessage(ChatColor.YELLOW + "/clan score <клан> <кол-во> " + ChatColor.GRAY
                     + "- начислить очки клану");
+        }
+        if (player.hasPermission("luckychests.clan.tp")) {
+            player.sendMessage(ChatColor.YELLOW + "/clan tp <клан> " + ChatColor.GRAY
+                    + "- телепортировать всех участников клана к себе");
         }
         player.sendMessage(ChatColor.YELLOW + "/top " + ChatColor.GRAY + "- топ кланов по очкам");
     }
@@ -341,6 +350,55 @@ public class ClanCommand implements CommandExecutor, TabCompleter {
                 + " очков. Текущий счёт: " + clan.getScore() + ".");
     }
 
+    /**
+     * Телепортирует ВСЕХ находящихся онлайн участников указанного клана
+     * к оператору, выполнившему команду. Доступно только игрокам с правом
+     * luckychests.clan.tp (по умолчанию — op), не обязательно состоящим
+     * в этом клане, так как это административная команда.
+     */
+    private void handleTp(Player player, String[] args) {
+        if (!player.hasPermission("luckychests.clan.tp")) {
+            player.sendMessage(ChatColor.RED + "У вас нет прав для телепортации клана.");
+            return;
+        }
+        if (args.length < 2) {
+            player.sendMessage(ChatColor.RED + "Использование: /clan tp <название клана>");
+            return;
+        }
+
+        Clan clan = manager.getClanByName(args[1]);
+        if (clan == null) {
+            player.sendMessage(ChatColor.RED + "Клан с таким названием не найден.");
+            return;
+        }
+
+        int teleported = 0;
+        for (UUID memberId : clan.getMembers()) {
+            Player member = Bukkit.getPlayer(memberId);
+            if (member == null || !member.isOnline()) {
+                continue;
+            }
+            if (member.getUniqueId().equals(player.getUniqueId())) {
+                // Не телепортируем самого оператора к самому себе, если он
+                // случайно состоит в этом клане.
+                continue;
+            }
+            member.teleport(player.getLocation());
+            member.sendMessage(ChatColor.YELLOW + "Вас телепортировал оператор вместе с кланом \""
+                    + clan.getName() + "\".");
+            teleported++;
+        }
+
+        if (teleported == 0) {
+            player.sendMessage(ChatColor.YELLOW + "Ни одного участника клана \"" + clan.getName()
+                    + "\" сейчас нет онлайн (либо в клане только вы).");
+            return;
+        }
+
+        player.sendMessage(ChatColor.GREEN + "Телепортировано игроков из клана " + ChatColor.AQUA
+                + clan.getName() + ChatColor.GREEN + ": " + teleported + ".");
+    }
+
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         if (args.length == 1) {
@@ -358,7 +416,7 @@ public class ClanCommand implements CommandExecutor, TabCompleter {
             return names;
         }
 
-        if (args.length == 2 && args[0].equalsIgnoreCase("score")) {
+        if (args.length == 2 && (args[0].equalsIgnoreCase("score") || args[0].equalsIgnoreCase("tp"))) {
             return manager.getAllClansSortedByScore().stream()
                     .map(Clan::getName)
                     .collect(Collectors.toList());
