@@ -51,7 +51,7 @@ import java.util.stream.Collectors;
 public class GuideCommand implements CommandExecutor, TabCompleter {
 
     private static final List<String> SUBCOMMANDS = Arrays.asList(
-            "invest", "totem", "wither", "boosts", "pvp", "shop", "potion", "commands");
+            "invest", "totem", "wither", "boosts", "pvp", "shop", "potion", "lootchests", "meteors", "commands");
 
     // Слоты 3x3-сетки рецепта внутри 54-слотовой (6 строк) витрины.
     private static final int[] RECIPE_GRID_SLOTS = {10, 11, 12, 19, 20, 21, 28, 29, 30};
@@ -105,6 +105,19 @@ public class GuideCommand implements CommandExecutor, TabCompleter {
             case "зелье":
                 sendPotionInfo(sender);
                 return true;
+            case "lootchests":
+            case "хранилища":
+            case "сундуки":
+                sendLootChestsInfo(sender);
+                return true;
+            case "meteors":
+            case "meteor":
+            case "фрикадельки":
+            case "фрикаделька":
+            case "метеориты":
+            case "метеорит":
+                sendMeteorsInfo(sender);
+                return true;
             case "commands":
             case "команды":
                 sendCommandList(sender);
@@ -135,6 +148,10 @@ public class GuideCommand implements CommandExecutor, TabCompleter {
                 + ChatColor.YELLOW + "/guide potion");
         sender.sendMessage(ChatColor.YELLOW + "Сужение барьера мира" + ChatColor.GRAY + " — периодический ивент, запускают операторы");
         sender.sendMessage(ChatColor.YELLOW + "/guide totem" + ChatColor.GRAY + " — посмотреть и увидеть рецепт " + CustomTotem.DISPLAY_NAME);
+        sender.sendMessage(ChatColor.YELLOW + "Хранилища" + ChatColor.GRAY + " — случайные сундуки с лутом по всему миру (подробнее — "
+                + ChatColor.YELLOW + "/guide lootchests" + ChatColor.GRAY + ")");
+        sender.sendMessage(ChatColor.YELLOW + "Фрикадельки" + ChatColor.GRAY + " — метеориты из магазина, сносят всё вокруг (подробнее — "
+                + ChatColor.YELLOW + "/guide meteors" + ChatColor.GRAY + ")");
         sender.sendMessage(ChatColor.GRAY + "Полный список команд — " + ChatColor.YELLOW + "/guide commands");
     }
 
@@ -224,7 +241,7 @@ public class GuideCommand implements CommandExecutor, TabCompleter {
         sender.sendMessage(ChatColor.YELLOW + "/guide, /гайд, /help, /помощь" + ChatColor.GRAY
                 + " — этот путеводитель ");
         sender.sendMessage(ChatColor.DARK_GRAY + "  подкоманды: " + ChatColor.GRAY
-                + "invest, totem, wither, boosts, pvp, shop, potion, commands");
+                + "invest, totem, wither, boosts, pvp, shop, potion, lootchests, meteors, commands");
         if (sender.hasPermission("luckychests.expboost")) {
             sender.sendMessage(ChatColor.DARK_GRAY + "/expboost" + ChatColor.GRAY + " — множитель опыта (оператор)");
         }
@@ -244,10 +261,55 @@ public class GuideCommand implements CommandExecutor, TabCompleter {
             sender.sendMessage(ChatColor.DARK_GRAY + "/clan tp <клан>" + ChatColor.GRAY + " — телепортировать всех участников клана к себе (оператор)");
         }
         if (sender.hasPermission("luckychests.admin")) {
+            sender.sendMessage(ChatColor.DARK_GRAY + "/lootchests" + ChatColor.GRAY + " — управление хранилищами: координаты, дроп, таймер, старт/стоп (оператор)");
             sender.sendMessage(ChatColor.DARK_GRAY + "/applechance" + ChatColor.GRAY + " — множитель шанса яблок (оператор)");
             sender.sendMessage(ChatColor.DARK_GRAY + "/giveradarpotion" + ChatColor.GRAY + " — выдать Зелье Чутья Врагов (оператор)");
             sender.sendMessage(ChatColor.DARK_GRAY + "/announce, /bcast" + ChatColor.GRAY + " — объявления (оператор)");
         }
+    }
+
+    private void sendMeteorsInfo(CommandSender sender) {
+        sender.sendMessage(ChatColor.GOLD + "" + ChatColor.BOLD + "=== Фрікадэльки (Метеориты) ===");
+        sender.sendMessage(ChatColor.GRAY + "" + ChatColor.ITALIC + "Фрікадэльки — так на сервере называют метеориты.");
+        sender.sendMessage("");
+        sender.sendMessage(ChatColor.YELLOW + "Что это:");
+        sender.sendMessage(ChatColor.GRAY + "Предмет из " + ChatColor.YELLOW + "/shop" + ChatColor.GRAY
+                + ", при использовании которого с неба обрушиваются " + ChatColor.RED + "10–15 метеоритов"
+                + ChatColor.GRAY + " — мощный инструмент разрушения и атаки.");
+        sender.sendMessage("");
+        sender.sendMessage(ChatColor.YELLOW + "Как работает:");
+        sender.sendMessage(ChatColor.GRAY + "• Возьми предмет в руку и используй его (ПКМ).");
+        sender.sendMessage(ChatColor.GRAY + "• Через " + ChatColor.RED + "5 секунд"
+                + ChatColor.GRAY + " метеориты начнут падать с неба.");
+        sender.sendMessage(ChatColor.GRAY + "• Радиус поражения — " + ChatColor.RED + "20 блоков"
+                + ChatColor.GRAY + " вокруг точки использования.");
+        sender.sendMessage(ChatColor.GRAY + "• Всё в зоне попадания получает урон — игроки, мобы, блоки.");
+        sender.sendMessage("");
+        sender.sendMessage(ChatColor.YELLOW + "Где взять:");
+        sender.sendMessage(ChatColor.GRAY + "Купить в " + ChatColor.YELLOW + "/shop"
+                + ChatColor.GRAY + " за очки клана.");
+        sender.sendMessage("");
+        sender.sendMessage(ChatColor.RED + "⚠ Используй с умом — метеориты не разбирают своих и чужих.");
+    }
+
+    private void sendLootChestsInfo(CommandSender sender) {
+        sender.sendMessage(ChatColor.GOLD + "" + ChatColor.BOLD + "=== Хранилища ===");
+        sender.sendMessage(ChatColor.GRAY + "По всему миру в заранее выбранных местах периодически появляются");
+        sender.sendMessage(ChatColor.GRAY + "случайные сундуки и бочки — " + ChatColor.YELLOW + "Хранилища" + ChatColor.GRAY + ".");
+        sender.sendMessage(ChatColor.GRAY + "Внутри каждого — случайный лут: ресурсы, редкие предметы и не только.");
+        sender.sendMessage(ChatColor.GRAY + "Предметы хаотично разбросаны по слотам, а не аккуратно сложены.");
+        sender.sendMessage("");
+        sender.sendMessage(ChatColor.YELLOW + "Как это работает:");
+        sender.sendMessage(ChatColor.GRAY + "• Одновременно активно несколько хранилищ в разных точках мира.");
+        sender.sendMessage(ChatColor.GRAY + "• Хранилище стоит бесконечно, пока его кто-нибудь не откроет.");
+        sender.sendMessage(ChatColor.GRAY + "• После первого открытия над ним появляется " + ChatColor.RED + "обратный отсчёт" + ChatColor.GRAY + ".");
+        sender.sendMessage(ChatColor.GRAY + "• Когда таймер истечёт — хранилище и весь оставшийся лут исчезнут.");
+        sender.sendMessage(ChatColor.GRAY + "• На его месте (или другой свободной точке) тут же появится новое.");
+        sender.sendMessage("");
+        sender.sendMessage(ChatColor.YELLOW + "Важно:");
+        sender.sendMessage(ChatColor.GRAY + "• Сломать хранилище " + ChatColor.RED + "нельзя" + ChatColor.GRAY + " — оно защищено от разрушения и взрывов.");
+        sender.sendMessage(ChatColor.GRAY + "• Поставить свой сундук/бочку на зарезервированное место " + ChatColor.RED + "тоже нельзя" + ChatColor.GRAY + ".");
+        sender.sendMessage(ChatColor.GRAY + "• Лут внутри выдаётся по таблице с шансами — не всё выпадет каждый раз.");
     }
 
     private void sendTotemRecipe(CommandSender sender) {

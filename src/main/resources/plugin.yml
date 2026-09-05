@@ -76,6 +76,10 @@ commands:
     description: Выдаёт игроку "Фрiкадэльки"
     usage: /givemeteorite <игрок>
     permission: luckychests.admin
+  lootchests:
+    description: Управление хранилищами
+    usage: /lootchests <add|rem|max|list|timer|drop|start|stop> ...
+    permission: luckychests.admin
 
 permissions:
   luckychests.expboost:

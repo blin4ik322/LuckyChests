@@ -14,6 +14,9 @@ import me.blin4ik322.luckychests.modules.enemypotion.EnemyPotionModule;
 import me.blin4ik322.luckychests.modules.expboost.ExpBoostModule;
 import me.blin4ik322.luckychests.modules.guide.GuideModule;
 import me.blin4ik322.luckychests.modules.invest.InvestModule;
+import me.blin4ik322.luckychests.modules.lootchests.LootChestsCommand;
+import me.blin4ik322.luckychests.modules.lootchests.LootChestsListener;
+import me.blin4ik322.luckychests.modules.lootchests.LootChestsModule;
 import me.blin4ik322.luckychests.modules.meteorite.MeteoriteCommand;
 import me.blin4ik322.luckychests.modules.meteorite.MeteoriteListener;
 import me.blin4ik322.luckychests.modules.meteorite.MeteoriteModule;
@@ -136,6 +139,13 @@ public final class LuckyChests extends JavaPlugin {
         } else {
             getLogger().warning("[Shop] команда 'shop' не объявлена в plugin.yml — добавьте её.");
         }
+
+
+        LootChestsModule lootChestsModule = new LootChestsModule(this);
+        getServer().getPluginManager().registerEvents(new LootChestsListener(lootChestsModule), this);
+        LootChestsCommand lootChestsCommand = new LootChestsCommand(lootChestsModule);
+        getCommand("lootchests").setExecutor(lootChestsCommand);
+        getCommand("lootchests").setTabCompleter(lootChestsCommand);
 
         getLogger().info("LuckyChests успешно запущен!");
     }
