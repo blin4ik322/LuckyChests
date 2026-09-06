@@ -1,0 +1,111 @@
+name: LuckyChests
+main: me.blin4ik322.luckychests.LuckyChests
+version: '1.0'
+api-version: '1.20'
+author: blin4ik322
+description: LuckyChests - лут-сундуки + модули AutoMelter, ExpBoost, WitherBoost, PvpMode, Кланы, Вложения, Награды за игроков и Путеводитель (/guide)
+
+commands:
+  guide:
+    description: Путеводитель по плагину — обзор всех фич, актуальный ценник /invest и визуальный показ рецепта тотема. Доступна всем игрокам.
+    usage: /guide [invest|totem|wither|commands]
+    aliases: [гайд, help, помощь]
+  melt:
+    description: Включить/выключить автоплавку руды. Доступна всем игрокам.
+    usage: /melt
+  плавить:
+    description: Включить/выключить автоплавку руды (алиас). Доступна всем игрокам.
+    usage: /плавить
+  expboost:
+    description: Настроить множитель выпадающего опыта. Только для операторов.
+    usage: /expboost <множитель|off>
+    permission: luckychests.expboost
+  witherchance:
+    description: Настроить множитель шанса выпадения черепа визера. Только для операторов.
+    usage: /witherchance <множитель|off>
+    permission: luckychests.witherchance
+  clan:
+    description: Управление кланами (создание, вступление, лидерство, очки ClanScores, tp и т.д.). Доступна всем игрокам, tp/score — только операторам.
+    usage: /clan <create|leave|disband|invite|accept|rename|leader|score|tp> [аргументы]
+    aliases: [клан]
+  top:
+    description: Показать топ кланов по очкам (ClanScores). Доступна всем игрокам.
+    usage: /top
+    aliases: [топ, clantop]
+  event:
+    description: Управление ивентом сужения барьера мира (WorldBorderTimer). Только для операторов.
+    usage: /event <start <время> <радиус>|stop>
+    aliases: [ивент, барьер]
+    permission: luckychests.event
+  invest:
+    description: Меню вложений (виртуальный сундук) + управление ценником предметов. Открытие меню доступно всем игрокам.
+    usage: /invest [add <предмет> <очки>|remove <предмет>|list]
+    aliases: [вложить]
+  playerbattle:
+    description: Включить/выключить динамические награды за убийство игроков и задать границы. Только для операторов.
+    usage: /playerbattle <минимум> <максимум>|off
+    permission: luckychests.playerbattle
+  bounties:
+    description: Показать список игроков, за убийство которых сейчас дают больше минимума. Доступна всем игрокам.
+    usage: /bounties
+    aliases: [награды]
+  broadcast:
+    description: Отправить объявление всем игрокам в чат
+    usage: /<command> <сообщение>
+    aliases: [ bcast ]
+    permission: server.announce
+    permission-message: У вас нет прав на использование этой команды.
+  announce:
+    description: Показать всем игрокам title/subtitle со звуком колокола
+    usage: /<command> "<title>" "<subtitle>" <секунды>s
+    permission: server.announce
+    permission-message: У вас нет прав на использование этой команды.
+  applechance:
+    description: "Управление множителем выпадения яблок"
+    usage: "/applechance <множитель | off>"
+    aliases: [ ac ]
+  giveradarpotion:
+    description: Выдать Зелье Чутья Врагов
+    usage: /giveradarpotion <игрок>
+    permission: luckychests.admin
+  shop:
+    description: Магазин предметов за очки клана
+    usage: /shop
+    aliases: [ магазин, store ]
+  givemeteorite:
+    description: Выдаёт игроку "Фрiкадэльки"
+    usage: /givemeteorite <игрок>
+    permission: luckychests.admin
+  lootchests:
+    description: Управление хранилищами
+    usage: /lootchests <add|rem|max|list|timer|drop|start|stop> ...
+    permission: luckychests.admin
+
+permissions:
+  luckychests.expboost:
+    description: Доступ к команде /expboost
+    default: op
+  luckychests.witherchance:
+    description: Доступ к команде /witherchance
+    default: op
+  luckychests.clan.score:
+    description: Доступ к команде /clan score (ручное начисление очков клану)
+    default: op
+  luckychests.clan.tp:
+    description: Доступ к команде /clan tp (телепортация всех участников клана к себе)
+    default: op
+  luckychests.event:
+    description: Доступ к команде /event (запуск/остановка сужения барьера мира)
+    default: op
+  luckychests.invest.admin:
+    description: Доступ к /invest add|remove|list (настройка ценника вложений)
+    default: op
+  luckychests.playerbattle:
+    description: Доступ к команде /playerbattle (настройка наград за убийство игроков)
+    default: op
+  luckychests.announce:
+    description: Доступ к командам объявлений (/bcast, /announce)
+    default: op
+  luckychests.admin:
+    description: Доступ ко всем административным командам LuckyChests
+    default: op

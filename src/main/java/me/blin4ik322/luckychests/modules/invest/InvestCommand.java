@@ -17,7 +17,8 @@ import java.util.stream.Collectors;
 
 /**
  * /invest, /вложить — открыть меню вложений (доступно всем игрокам).
- * /invest add <предмет> <очки> — задать/обновить цену предмета (операторы).
+ * /invest add <предмет> <очки> [количество] — задать/обновить цену предмета (операторы).
+ * Цена задаётся за партию: "add COBBLED_DEEPSLATE 1 64" = 1 очко за 64 штуки.
  * /invest remove <предмет> — убрать предмет из ценника (операторы).
  * /invest list — посмотреть текущий ценник (операторы).
  */
@@ -68,8 +69,10 @@ public class InvestCommand implements CommandExecutor, TabCompleter {
             sender.sendMessage(ChatColor.RED + "Недостаточно прав.");
             return;
         }
-        if (args.length != 3) {
-            sender.sendMessage(ChatColor.RED + "Использование: /invest add <предмет> <очки>");
+        if (args.length != 3 && args.length != 4) {
+            sender.sendMessage(ChatColor.RED + "Использование: /invest add <предмет> <очки> [количество]");
+            sender.sendMessage(ChatColor.GRAY + "Пример: /invest add COBBLED_DEEPSLATE 1 64"
+                    + " — 1 очко за 64 штуки. Без последнего аргумента цена считается за 1 штуку.");
             return;
         }
 
@@ -93,9 +96,24 @@ public class InvestCommand implements CommandExecutor, TabCompleter {
             return;
         }
 
-        module.setItemValue(material, points);
+        int unit = 1;
+        if (args.length == 4) {
+            try {
+                unit = Integer.parseInt(args[3]);
+            } catch (NumberFormatException e) {
+                sender.sendMessage(ChatColor.RED + "Количество должно быть целым числом.");
+                return;
+            }
+            if (unit <= 0) {
+                sender.sendMessage(ChatColor.RED + "Количество должно быть больше нуля.");
+                return;
+            }
+        }
+
+        module.setItemValue(material, points, unit);
         sender.sendMessage(ChatColor.GREEN + "Теперь " + material.name() + " стоит "
-                + ChatColor.YELLOW + points + ChatColor.GREEN + " очков за штуку.");
+                + ChatColor.YELLOW + points + ChatColor.GREEN + " очков за "
+                + ChatColor.YELLOW + unit + ChatColor.GREEN + " шт.");
     }
 
     private void handleRemove(CommandSender sender, String[] args) {
@@ -126,23 +144,24 @@ public class InvestCommand implements CommandExecutor, TabCompleter {
             sender.sendMessage(ChatColor.RED + "Недостаточно прав.");
             return;
         }
-        Map<Material, Integer> values = module.getItemValues();
+        Map<Material, InvestPrice> values = module.getItemValues();
         if (values.isEmpty()) {
             sender.sendMessage(ChatColor.GRAY + "Ценник пуст. Добавь предметы через /invest add.");
             return;
         }
         sender.sendMessage(ChatColor.GOLD + "" + ChatColor.BOLD + "Ценник вложений:");
-        values.forEach((material, points) ->
+        values.forEach((material, price) ->
                 sender.sendMessage(ChatColor.WHITE + material.name() + ChatColor.GRAY + " — "
-                        + ChatColor.YELLOW + points + ChatColor.GRAY + " очков/шт."));
+                        + ChatColor.YELLOW + price.getPoints() + ChatColor.GRAY + " очков за "
+                        + ChatColor.WHITE + price.getUnit() + ChatColor.GRAY + " шт."));
     }
 
     private void sendUsage(CommandSender sender) {
         sender.sendMessage(ChatColor.GOLD + "" + ChatColor.BOLD + "[Вложения] " + ChatColor.YELLOW + "Команды:");
         sender.sendMessage(ChatColor.WHITE + "/invest" + ChatColor.GRAY + " — открыть меню вложений");
         if (sender.hasPermission(ADMIN_PERMISSION)) {
-            sender.sendMessage(ChatColor.WHITE + "/invest add <предмет> <очки>" + ChatColor.GRAY
-                    + " — задать цену предмета");
+            sender.sendMessage(ChatColor.WHITE + "/invest add <предмет> <очки> [количество]" + ChatColor.GRAY
+                    + " — задать цену предмета (очки за партию)");
             sender.sendMessage(ChatColor.WHITE + "/invest remove <предмет>" + ChatColor.GRAY
                     + " — убрать предмет из ценника");
             sender.sendMessage(ChatColor.WHITE + "/invest list" + ChatColor.GRAY + " — показать ценник");
@@ -167,6 +186,11 @@ public class InvestCommand implements CommandExecutor, TabCompleter {
 
         if (args.length == 3 && args[0].equalsIgnoreCase("add")) {
             return filter(Arrays.asList("1", "5", "10", "25", "50", "100"), args[2]);
+        }
+
+        if (args.length == 4 && args[0].equalsIgnoreCase("add")) {
+            // Размер партии: чаще всего стак/полстака/поштучно.
+            return filter(Arrays.asList("1", "16", "32", "64"), args[3]);
         }
 
         return new ArrayList<>();

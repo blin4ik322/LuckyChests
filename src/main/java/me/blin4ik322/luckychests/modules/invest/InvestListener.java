@@ -91,10 +91,20 @@ public class InvestListener implements Listener {
                 if (!player.isOnline()) {
                     return;
                 }
-                module.confirmInvestment(player, top);
+                // ВАЖНО: берём инвентарь, открытый ПРЯМО СЕЙЧАС, а не тот, что
+                // был захвачен в момент клика. За прошедший тик refreshTitle()
+                // мог подменить его новым объектом с теми же ItemStack'ами, и
+                // продажа из "устаревшего" инвентаря начисляла очки за предметы,
+                // которые оставались лежать в реально открытом — то есть
+                // дублировала их.
+                Inventory current = currentInvestInventory(player);
+                if (current == null) {
+                    return;
+                }
+                module.confirmInvestment(player, current);
                 // Меню не закрывается — сумма сброшена на 0, обновляем название сундука,
                 // чтобы игрок сразу видел, что можно докладывать следующую партию.
-                refreshTitle(player, top);
+                refreshTitle(player, current);
             });
             return;
         }
@@ -104,9 +114,16 @@ public class InvestListener implements Listener {
 
         if (touchesSellInfoButton) {
             event.setCancelled(true);
-            pendingInvestInventory.put(player.getUniqueId(), top);
             Bukkit.getScheduler().runTask(module.getPlugin(), () -> {
                 if (player.isOnline()) {
+                    // Тот же случай, что и с "Подтвердить": запоминаем актуальный
+                    // инвентарь, а не захваченный тиком раньше, — иначе кнопка
+                    // "Назад" вернула бы игрока в подменённую копию.
+                    Inventory current = currentInvestInventory(player);
+                    if (current == null) {
+                        return;
+                    }
+                    pendingInvestInventory.put(player.getUniqueId(), current);
                     module.openPriceList(player);
                 }
             });
@@ -174,6 +191,18 @@ public class InvestListener implements Listener {
             return;
         }
         scheduleRefresh((Player) event.getWhoClicked(), top);
+    }
+
+    /**
+     * Инвентарь вложений, открытый у игрока прямо сейчас, или null, если
+     * открыт уже не он. Нужен там, где действие выполняется отложенно (через
+     * тик): за это время refreshTitle() могло пересоздать инвентарь, и работать
+     * со старым объектом нельзя — в нём лежат ТЕ ЖЕ ItemStack'и, что и в новом,
+     * так что любая операция над ним считает предметы вторично.
+     */
+    private Inventory currentInvestInventory(Player player) {
+        Inventory top = player.getOpenInventory().getTopInventory();
+        return top.getHolder() instanceof InvestHolder ? top : null;
     }
 
     private void scheduleRefresh(Player player, Inventory involvedInventory) {

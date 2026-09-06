@@ -18,38 +18,52 @@ import java.util.UUID;
 import java.util.logging.Level;
 
 /**
- * Хранит "стрик" (кол-во убийств подряд без смерти) каждого игрока и считает
- * по нему динамическую награду (bounty) — сколько очков клан получит за
- * убийство этого игрока прямо сейчас.
+ * Хранит накопленную "надбавку к награде" каждого игрока и считает по ней
+ * динамическую награду (bounty) — сколько очков клан получит за убийство
+ * этого игрока прямо сейчас.
  *
- * Формула:
- *   bounty(streak) = min                                   , если streak <= 0
- *   bounty(streak) = max                                   , если streak >= STREAK_FOR_MAX
- *   bounty(streak) = round(min + (max - min) * streak / STREAK_FOR_MAX)   , иначе
+ * Формула (таблица экономики, колонки G/H/I):
+ *   bounty = min(max, round(base * (1 + bonus)))
  *
- * То есть награда растёт линейно с каждым убийством и достигает потолка
- * (max, задаётся командой /playerbattle) ровно за STREAK_FOR_MAX подряд
- * убийств. Например при min=15, max=45, STREAK_FOR_MAX=10 каждое убийство
- * добавляет +3 очка: 15 -> 18 -> 21 -> 24 -> ... -> 45.
+ * где base — базовая награда за игрока (H1, по умолчанию 15 очков), max —
+ * потолок награды, а bonus — сумма надбавок за всё, что игрок успел убить
+ * с момента своей последней смерти:
+ *
+ *   убийство игрока  → +20% (I1)
+ *   убийство визера  → +15% (I2)
+ *   убийство дракона → +10% (I3)
+ *
+ * Надбавки складываются от базовой награды, а не друг от друга: 10 убийств
+ * игроков дают base * (1 + 10*0.20) = base * 3. При базовых min=15/max=45
+ * это ровно прежняя линейная кривая (15 -> 18 -> 21 -> ... -> 45 за 10
+ * убийств), только выраженная процентами, как в таблице.
  *
  * Защита от накрутки: если убийца уже убивал конкретную жертву с момента
- * своего последнего сброса стрика, повторное убийство этой же жертвы даёт
- * клану bounty как обычно, но собственный стрик (и, значит, награда за
- * убийцу) больше не растёт — растёт только за новых жертв. Список уже
- * убитых игроков очищается вместе со стриком (см. {@link #resetStreak}).
+ * своего последнего сброса стрика, повторное убийство этой же жертвы не даёт
+ * ему ничего — ни очков клану, ни роста собственного стрика. Иначе двое
+ * игроков из разных кланов могли бы бесконечно убивать друг друга, получая
+ * минимальную награду за каждое убийство. Список уже убитых игроков
+ * очищается вместе со стриком (см. {@link #resetStreak}), поэтому вернуть
+ * жертве "ценность" можно только собственной смертью.
  *
- * Стрик игрока сбрасывается только когда его убивает игрок не из его
- * клана — обычная смерть (моб, падение, лава, /kill и т.п.) стрик и
- * награду за голову больше не трогает.
+ * Надбавка игрока сбрасывается только когда его убивает игрок не из его
+ * клана — обычная смерть (моб, падение, лава, /kill и т.п.) награду за
+ * голову больше не трогает.
  *
- * Данные (стрики и списки убитых жертв) хранятся в playersbattle.yml и
+ * Данные (надбавки и списки убитых жертв) хранятся в playersbattle.yml и
  * переживают перезапуск сервера/перезаход игрока. Сохранение — сразу
  * после каждого изменения, как и в ClanManager/InvestModule.
  */
 public class PlayerBattleManager {
 
-    /** Сколько убийств подряд нужно, чтобы награда за игрока достигла максимума. */
-    private static final int STREAK_FOR_MAX = 10;
+    /** Надбавка к собственной награде за убийство игрока (I1). */
+    public static final double PLAYER_KILL_BONUS = 0.20;
+
+    /** Надбавка к собственной награде за убийство визера (I2). */
+    public static final double WITHER_KILL_BONUS = 0.15;
+
+    /** Надбавка к собственной награде за убийство дракона (I3). */
+    public static final double DRAGON_KILL_BONUS = 0.10;
 
     private final JavaPlugin plugin;
     private final File file;
@@ -58,11 +72,12 @@ public class PlayerBattleManager {
     private int minPoints = 15;
     private int maxPoints = 45;
 
-    private final Map<UUID, Integer> streaks = new HashMap<>();
+    /** UUID игрока -> накопленная надбавка к его награде (0.20 = +20%). */
+    private final Map<UUID, Double> bonuses = new HashMap<>();
 
     /**
      * Для каждого убийцы — множество жертв, убийство которых уже засчиталось
-     * в его текущий стрик. Очищается при сбросе стрика убийцы. Нужно, чтобы
+     * в его текущую серию. Очищается при сбросе надбавки убийцы. Нужно, чтобы
      * нельзя было накручивать себе награду, убивая одного и того же игрока
      * по кругу — очки клану за это всё равно начисляются, а стрик убийцы
      * растёт только за новых жертв.
@@ -79,7 +94,7 @@ public class PlayerBattleManager {
     // ---------------------------------------------------------------
 
     public synchronized void load() {
-        streaks.clear();
+        bonuses.clear();
         killedVictims.clear();
 
         if (!file.exists()) {
@@ -97,9 +112,12 @@ public class PlayerBattleManager {
             for (String key : playersSection.getKeys(false)) {
                 try {
                     UUID uuid = UUID.fromString(key);
-                    int streak = playersSection.getInt(key + ".streak", 0);
-                    if (streak > 0) {
-                        streaks.put(uuid, streak);
+                    double bonus = playersSection.getDouble(key + ".bonus",
+                            // Совместимость со старым форматом: там лежало число
+                            // убийств подряд, каждое из которых давало +20%.
+                            playersSection.getInt(key + ".streak", 0) * PLAYER_KILL_BONUS);
+                    if (bonus > 0) {
+                        bonuses.put(uuid, bonus);
                     }
 
                     List<String> killedList = playersSection.getStringList(key + ".killed");
@@ -124,7 +142,7 @@ public class PlayerBattleManager {
 
         plugin.getLogger().info("[PlayerBattle] загружено: enabled=" + enabled
                 + ", min=" + minPoints + ", max=" + maxPoints
-                + ", игроков со стриком=" + streaks.size());
+                + ", игроков с надбавкой=" + bonuses.size());
     }
 
     public synchronized void save() {
@@ -135,11 +153,11 @@ public class PlayerBattleManager {
         yaml.set("settings.max", maxPoints);
 
         ConfigurationSection playersSection = yaml.createSection("players");
-        for (Map.Entry<UUID, Integer> entry : streaks.entrySet()) {
+        for (Map.Entry<UUID, Double> entry : bonuses.entrySet()) {
             if (entry.getValue() <= 0) {
                 continue;
             }
-            playersSection.set(entry.getKey().toString() + ".streak", entry.getValue());
+            playersSection.set(entry.getKey().toString() + ".bonus", entry.getValue());
         }
         for (Map.Entry<UUID, Set<UUID>> entry : killedVictims.entrySet()) {
             if (entry.getValue().isEmpty()) {
@@ -200,56 +218,80 @@ public class PlayerBattleManager {
     }
 
     // ---------------------------------------------------------------
-    // Стрики и награда
+    // Надбавки и награда
     // ---------------------------------------------------------------
 
-    public synchronized int getStreak(UUID uuid) {
-        return streaks.getOrDefault(uuid, 0);
+    /** Накопленная надбавка игрока к собственной награде (0.20 = +20%). */
+    public synchronized double getBonus(UUID uuid) {
+        return bonuses.getOrDefault(uuid, 0.0);
+    }
+
+    /** Та же надбавка в целых процентах — для показа игрокам (/bounties). */
+    public synchronized int getBonusPercent(UUID uuid) {
+        return (int) Math.round(getBonus(uuid) * 100);
     }
 
     /** Текущая награда за убийство этого игрока прямо сейчас (в очках). */
     public synchronized int getBounty(UUID uuid) {
-        return calculateBounty(getStreak(uuid));
+        return calculateBounty(getBonus(uuid));
     }
 
-    private int calculateBounty(int streak) {
-        if (streak <= 0) {
+    private int calculateBounty(double bonus) {
+        if (bonus <= 0) {
             return minPoints;
         }
-        if (streak >= STREAK_FOR_MAX) {
-            return maxPoints;
-        }
-        double progress = (double) streak / STREAK_FOR_MAX;
-        return (int) Math.round(minPoints + (maxPoints - minPoints) * progress);
+        long bounty = Math.round(minPoints * (1.0 + bonus));
+        return (int) Math.min(maxPoints, bounty);
     }
 
     /**
-     * Игрок совершил засчитываемое убийство (не тимкилл). Если он убивает
-     * этого {@code victim} впервые с момента своего последнего сброса
-     * стрика — стрик растёт, награда за будущее убийство увеличивается.
-     * Если этого же {@code victim} он уже убивал ранее в рамках текущего
-     * стрика — очки клану всё равно начисляются (это делает вызывающий
-     * код), но сам стрик убийцы не растёт, чтобы нельзя было накручивать
-     * себе награду, убивая одного и того же игрока по кругу.
+     * Игрок совершил засчитываемое убийство игрока (не тимкилл).
+     *
+     * Возвращает {@code true}, только если он убивает этого {@code victim}
+     * впервые с момента своей последней смерти: тогда его надбавка растёт на
+     * {@link #PLAYER_KILL_BONUS}, и вызывающий код начисляет клану очки.
+     * Повторное убийство того же игрока возвращает {@code false} и не даёт
+     * НИЧЕГО — ни надбавки, ни очков.
+     *
+     * Так закрывается фарм очков "по кругу": двое игроков из разных кланов
+     * могли бесконечно убивать друг друга и получать минимальную награду за
+     * каждое убийство. Теперь, чтобы одна и та же жертва снова начала
+     * приносить очки, убийца должен сам умереть — это сбрасывает его надбавку
+     * вместе со списком уже убитых (см. {@link #resetStreak}).
      */
-    public synchronized void registerKill(UUID killer, UUID victim) {
+    public synchronized boolean registerKill(UUID killer, UUID victim) {
         Set<UUID> alreadyKilled = killedVictims.computeIfAbsent(killer, k -> new HashSet<>());
         if (alreadyKilled.add(victim)) {
-            int current = streaks.getOrDefault(killer, 0);
-            streaks.put(killer, current + 1);
-            save();
+            addBonus(killer, PLAYER_KILL_BONUS);
+            return true;
         }
+        return false;
     }
 
     /**
-     * Стрик игрока сбрасывается (например, его убил игрок не из его
+     * Игрок убил босса — его собственная награда за голову растёт на
+     * {@code bonus} ({@link #WITHER_KILL_BONUS} / {@link #DRAGON_KILL_BONUS}).
+     * В отличие от убийств игроков, повторные убийства боссов ограничиваются
+     * не здесь, а кулдауном самого босса.
+     */
+    public synchronized void registerBossKill(UUID killer, double bonus) {
+        addBonus(killer, bonus);
+    }
+
+    private void addBonus(UUID player, double bonus) {
+        bonuses.merge(player, bonus, Double::sum);
+        save();
+    }
+
+    /**
+     * Надбавка игрока сбрасывается (например, его убил игрок не из его
      * клана) — награда за его голову снова падает до минимума, а список
-     * уже убитых им жертв обнуляется, так что следующий его стрик снова
+     * уже убитых им жертв обнуляется, так что следующая его серия снова
      * будет засчитывать убийство любого игрока, включая тех, кого он уже
      * убивал раньше.
      */
     public synchronized void resetStreak(UUID victim) {
-        boolean changed = streaks.remove(victim) != null;
+        boolean changed = bonuses.remove(victim) != null;
         changed = killedVictims.remove(victim) != null || changed;
         if (changed) {
             save();
@@ -263,7 +305,7 @@ public class PlayerBattleManager {
      */
     public synchronized List<Map.Entry<UUID, Integer>> getBounties() {
         List<Map.Entry<UUID, Integer>> result = new ArrayList<>();
-        for (UUID uuid : streaks.keySet()) {
+        for (UUID uuid : bonuses.keySet()) {
             int bounty = getBounty(uuid);
             if (bounty > minPoints) {
                 result.add(new AbstractMap.SimpleEntry<>(uuid, bounty));

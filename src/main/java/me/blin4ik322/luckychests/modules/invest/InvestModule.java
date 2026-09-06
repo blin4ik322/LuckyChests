@@ -63,7 +63,7 @@ public class InvestModule {
 
     private final JavaPlugin plugin;
     private final ClanManager clanManager;
-    private final Map<Material, Integer> itemValues = new EnumMap<>(Material.class);
+    private final Map<Material, InvestPrice> itemValues = new EnumMap<>(Material.class);
 
     private File file;
     private FileConfiguration config;
@@ -147,7 +147,7 @@ public class InvestModule {
         }
 
         int slot = 0;
-        for (Map.Entry<Material, Integer> entry : itemValues.entrySet()) {
+        for (Map.Entry<Material, InvestPrice> entry : itemValues.entrySet()) {
             if (slot == PRICE_LIST_BACK_SLOT) {
                 slot++; // не занимаем слот кнопки "Назад" товарами
             }
@@ -172,13 +172,15 @@ public class InvestModule {
         return pane;
     }
 
-    private ItemStack buildPriceIcon(Material material, int price) {
-        ItemStack icon = new ItemStack(material, 1);
+    private ItemStack buildPriceIcon(Material material, InvestPrice price) {
+        // Иконка показывает размер партии стопкой — сразу видно, сколько нести.
+        ItemStack icon = new ItemStack(material, Math.min(material.getMaxStackSize(), price.getUnit()));
         ItemMeta meta = icon.getItemMeta();
         if (meta != null) {
             meta.setDisplayName(ChatColor.WHITE + material.name());
             meta.setLore(Collections.singletonList(
-                    ChatColor.GRAY + "Цена: " + ChatColor.YELLOW + price + ChatColor.GRAY + " очков/шт."));
+                    ChatColor.GRAY + "Цена: " + ChatColor.YELLOW + price.getPoints() + ChatColor.GRAY
+                            + " очков за " + ChatColor.WHITE + price.getUnit() + ChatColor.GRAY + " шт."));
             icon.setItemMeta(meta);
         }
         return icon;
@@ -208,11 +210,12 @@ public class InvestModule {
             if (item == null) {
                 continue;
             }
-            Integer value = itemValues.get(item.getType());
-            if (value == null || value <= 0) {
+            InvestPrice price = itemValues.get(item.getType());
+            if (price == null) {
                 continue;
             }
-            total += value * item.getAmount();
+            // Неполные партии не считаем — за них и не заплатят.
+            total += price.pointsFor(item.getAmount());
         }
         return total;
     }
@@ -236,11 +239,23 @@ public class InvestModule {
                 continue;
             }
 
-            Integer value = itemValues.get(item.getType());
-            if (value != null && value > 0) {
-                points += value * item.getAmount(); // предмет из ценника — продан
-            } else {
+            InvestPrice price = itemValues.get(item.getType());
+            if (price == null) {
                 giveOrDrop(player, item); // не из ценника — возвращаем сразу
+                inventory.setItem(i, null);
+                continue;
+            }
+
+            int sold = price.consumedFor(item.getAmount());
+            points += price.pointsFor(item.getAmount());
+
+            int leftover = item.getAmount() - sold;
+            if (leftover > 0) {
+                // Неполная партия: за неё не платят, поэтому и не забираем —
+                // возвращаем игроку, чтобы он мог докопить до целой.
+                ItemStack rest = item.clone();
+                rest.setAmount(leftover);
+                giveOrDrop(player, rest);
             }
             inventory.setItem(i, null);
         }
@@ -297,11 +312,15 @@ public class InvestModule {
     // Ценник предметов (операторская настройка)
     // ---------------------------------------------------------------
 
-    public void setItemValue(Material material, int points) {
+    /**
+     * Задаёт цену: {@code points} очков за партию из {@code unit} штук.
+     * {@code points <= 0} убирает предмет из ценника.
+     */
+    public void setItemValue(Material material, int points, int unit) {
         if (points <= 0) {
             itemValues.remove(material);
         } else {
-            itemValues.put(material, points);
+            itemValues.put(material, new InvestPrice(points, unit));
         }
         saveConfig();
     }
@@ -314,11 +333,11 @@ public class InvestModule {
         return removed;
     }
 
-    public Integer getItemValue(Material material) {
+    public InvestPrice getItemValue(Material material) {
         return itemValues.get(material);
     }
 
-    public Map<Material, Integer> getItemValues() {
+    public Map<Material, InvestPrice> getItemValues() {
         return itemValues;
     }
 
@@ -345,15 +364,75 @@ public class InvestModule {
                     plugin.getLogger().warning("[Invest] Неизвестный материал в invest.yml: " + key);
                     continue;
                 }
-                itemValues.put(material, section.getInt(key));
+                if (section.isConfigurationSection(key)) {
+                    // Новый формат: очки за партию из N штук.
+                    int points = section.getInt(key + ".points", 0);
+                    int unit = section.getInt(key + ".per", 1);
+                    if (points > 0) {
+                        itemValues.put(material, new InvestPrice(points, unit));
+                    }
+                } else {
+                    // Старый формат: одно число — очки за штуку.
+                    int points = section.getInt(key);
+                    if (points > 0) {
+                        itemValues.put(material, new InvestPrice(points, 1));
+                    }
+                }
             }
         }
+
+        // Стартовый ценник записывается ровно один раз — при первом запуске.
+        // Флаг нужен, чтобы намеренно очищенный ценник не "воскресал" после
+        // каждого перезапуска сервера.
+        if (itemValues.isEmpty() && !config.getBoolean("defaults-applied", false)) {
+            applyDefaultPrices();
+            config.set("defaults-applied", true);
+            saveConfig();
+            plugin.getLogger().info("[Invest] записан стартовый ценник ("
+                    + itemValues.size() + " позиций).");
+        }
+    }
+
+    /**
+     * Стартовый ценник вложений — таблица экономики сервера (колонки A/B).
+     * Записывается в invest.yml только если ценник пуст, дальше его можно
+     * править командами /invest add|remove или прямо в файле.
+     */
+    private void applyDefaultPrices() {
+        put(Material.COBBLED_DEEPSLATE, 1, 64);
+        // "Wood x32" — под деревом понимаются брёвна: ценник материальный,
+        // поэтому одна и та же цена ставится каждому виду брёвен.
+        for (Material log : new Material[]{
+                Material.OAK_LOG, Material.SPRUCE_LOG, Material.BIRCH_LOG, Material.JUNGLE_LOG,
+                Material.ACACIA_LOG, Material.DARK_OAK_LOG, Material.MANGROVE_LOG, Material.CHERRY_LOG}) {
+            put(log, 1, 32); // ~0.03125 / шт
+        }
+        put(Material.COAL, 1, 32); // ~0.03125 / шт
+        put(Material.POTATO, 3, 64); // ~0.046875 / шт
+        put(Material.CARROT, 3, 64); // ~0.046875 / шт
+        put(Material.LAPIS_LAZULI, 2, 32); // ~0.0625 / шт
+        put(Material.REDSTONE, 2, 32); // ~0.0625 / шт
+        put(Material.IRON_INGOT, 1, 1); // 1.0 / шт
+        put(Material.COD, 1, 1); // 1.0 / шт
+        put(Material.GOLD_INGOT, 2, 1); // 2.0 / шт
+        put(Material.SHULKER_SHELL, 5, 1); // 5.0 / шт
+        put(Material.DIAMOND, 7, 1); // 7.0 / шт
+        put(Material.WITHER_SKELETON_SKULL, 15, 1); // 15.0 / шт
+        put(Material.ANCIENT_DEBRIS, 20, 1); // 20.0 / шт
+        put(Material.ELYTRA, 200, 1); // 200.0 / шт
+        put(Material.DRAGON_EGG, 500, 1); // 500.0 / шт
+    }
+
+    private void put(Material material, int points, int unit) {
+        itemValues.put(material, new InvestPrice(points, unit));
     }
 
     private void saveConfig() {
         config.set("items", null); // чистим секцию перед перезаписью, чтобы не оставались удалённые ключи
-        for (Map.Entry<Material, Integer> entry : itemValues.entrySet()) {
-            config.set("items." + entry.getKey().name(), entry.getValue());
+        for (Map.Entry<Material, InvestPrice> entry : itemValues.entrySet()) {
+            String path = "items." + entry.getKey().name();
+            config.set(path + ".points", entry.getValue().getPoints());
+            config.set(path + ".per", entry.getValue().getUnit());
         }
         try {
             config.save(file);

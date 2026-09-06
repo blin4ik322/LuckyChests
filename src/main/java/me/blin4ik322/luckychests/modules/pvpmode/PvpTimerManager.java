@@ -9,6 +9,7 @@ import org.bukkit.boss.BossBar;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 
 import java.util.HashMap;
@@ -172,20 +173,18 @@ public class PvpTimerManager {
      * поэтому используем повторяющуюся задачу.
      */
     private void showExitActionBar(UUID playerId) {
-        Bukkit.getScheduler().runTaskTimer(plugin, new Runnable() {
+        // BukkitRunnable, а не анонимный Runnable: у него есть собственный
+        // cancel(), поэтому задача может остановить сама себя. Раньше здесь
+        // лежала ссылка "self", которая никогда не присваивалась — задача
+        // не отменялась НИКОГДА и висела в планировщике до перезапуска сервера.
+        new BukkitRunnable() {
             private int ticks = 0;
-            private BukkitTask self;
-
-            // Ленивая инициализация: сохраняем ссылку на себя через обёртку.
-            {
-                // Задача будет установлена сразу после запуска (см. ниже).
-            }
 
             @Override
             public void run() {
                 Player player = Bukkit.getPlayer(playerId);
                 if (player == null || !player.isOnline() || ticks >= EXIT_ACTIONBAR_TICKS) {
-                    if (self != null) self.cancel();
+                    cancel();
                     return;
                 }
                 player.spigot().sendMessage(
@@ -194,13 +193,7 @@ public class PvpTimerManager {
                 );
                 ticks += 2; // задача раз в 2 тика, чтобы сообщение не моргало
             }
-        }, 0L, 2L) /* ← возвращённую задачу нам нужно связать с self */;
-
-        // Упрощённый вариант без self-ссылки:
-        // запускаем отдельную задачу через EXIT_ACTIONBAR_TICKS, которая ничего не делает —
-        // ActionBar сам пропадёт, если его перестать обновлять (клиент сбрасывает его ~через 3 с).
-        // Описанный выше runTaskTimer уже держит текст 60 тиков (3 с), после чего
-        // перестаёт слать пакеты и бар гаснет сам.
+        }.runTaskTimer(plugin, 0L, 2L);
     }
 
     // ── Утилиты ─────────────────────────────────────────────────────────────

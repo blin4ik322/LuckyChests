@@ -8,6 +8,7 @@ import me.blin4ik322.luckychests.modules.clans.ClanManager;
 import me.blin4ik322.luckychests.modules.clans.ClanTopCommand;
 import me.blin4ik322.luckychests.modules.core.ModuleManager;
 import me.blin4ik322.luckychests.modules.customwither.CustomWitherModule;
+import me.blin4ik322.luckychests.modules.dragonboss.DragonBossModule;
 import me.blin4ik322.luckychests.modules.enemypotion.EnemyPotionCommand;
 import me.blin4ik322.luckychests.modules.enemypotion.EnemyPotionListener;
 import me.blin4ik322.luckychests.modules.enemypotion.EnemyPotionModule;
@@ -41,6 +42,7 @@ public final class LuckyChests extends JavaPlugin {
     private PlayerBattleModule playerBattleModule;
     private EnemyPotionModule enemyPotionModule;
     private MeteoriteModule meteoriteModule;
+    private LootChestsModule lootChestsModule;
 
 
     @Override
@@ -75,9 +77,23 @@ public final class LuckyChests extends JavaPlugin {
         pvpListener.setClanManager(clanManager);          // передаём ClanManager
         getServer().getPluginManager().registerEvents(pvpListener, this);
 
+        // ── Награды за игроков ───────────────────────────────────────────────
+        // Динамическая награда клану за PvP-убийство: растёт вместе с надбавкой
+        // жертвы (+20% за игрока, +15% за визера, +10% за дракона) и сбрасывается
+        // после её смерти.
+        // Включается/настраивается командой /playerbattle, список — /bounties.
+        // Подключается ДО модулей боссов: им нужен его PlayerBattleManager,
+        // чтобы начислять убийце надбавку к собственной награде за голову.
+        playerBattleModule = new PlayerBattleModule(this, clanManager);
+        playerBattleModule.enable();
+
         // ── Кастомный визер ──────────────────────────────────────────────────
-        // Без звука спавна, с градиентным именем и наградой 50 очков клану за убийство.
-        new CustomWitherModule(this, clanManager).enable();
+        // Градиентное имя и награда клану за убийство (+ надбавка убийце).
+        new CustomWitherModule(this, clanManager, playerBattleModule.getManager()).enable();
+
+        // ── Дракон Края ──────────────────────────────────────────────────────
+        // Награда клану за убийство дракона, не чаще раза в час на весь сервер.
+        new DragonBossModule(this, clanManager, playerBattleModule.getManager()).enable();
 
         // ── WorldBorderTimer ─────────────────────────────────────────────────
         // Сужение барьера мира по /event start|stop.
@@ -98,13 +114,6 @@ public final class LuckyChests extends JavaPlugin {
         // визуальный показ рецепта тотема (GUI) и настоящая регистрация этого рецепта
         // на верстаке сервера. Подключается после InvestModule.
         new GuideModule(this, investModule).enable();
-
-        // ── Награды за игроков ───────────────────────────────────────────────
-        // Динамическая награда клану за PvP-убийство, растёт со стриком убийств жертвы
-        // и сбрасывается после её смерти.
-        // Включается/настраивается командой /playerbattle, список — /bounties.
-        playerBattleModule = new PlayerBattleModule(this, clanManager);
-        playerBattleModule.enable();
 
 
         enemyPotionModule = new EnemyPotionModule(this, clanManager);
@@ -141,7 +150,11 @@ public final class LuckyChests extends JavaPlugin {
         }
 
 
-        LootChestsModule lootChestsModule = new LootChestsModule(this);
+        // Поле, а не локальная переменная: в onDisable() нужно вызвать
+        // lootChestsModule.shutdown() — остановить отсчёты, убрать летающий текст
+        // и сохранить стоящие хранилища, чтобы после перезапуска они не остались
+        // в мире "ничьими" (без таймера и без защиты от разрушения).
+        lootChestsModule = new LootChestsModule(this);
         getServer().getPluginManager().registerEvents(new LootChestsListener(lootChestsModule), this);
         LootChestsCommand lootChestsCommand = new LootChestsCommand(lootChestsModule);
         getCommand("lootchests").setExecutor(lootChestsCommand);
@@ -162,6 +175,9 @@ public final class LuckyChests extends JavaPlugin {
         }
         if (enemyPotionModule != null) {
             enemyPotionModule.stopTask(); // сам таск.cancel() + activeRadars.clear()
+        }
+        if (lootChestsModule != null) {
+            lootChestsModule.shutdown();
         }
         getLogger().info("LuckyChests выключен.");
     }

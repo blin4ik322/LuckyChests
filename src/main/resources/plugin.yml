@@ -11,11 +11,15 @@ commands:
     usage: /guide [invest|totem|wither|commands]
     aliases: [гайд, help, помощь]
   melt:
-    description: Включить/выключить автоплавку руды. Доступна всем игрокам.
+    description: Включить/выключить автоплавку руды на всём сервере. Только для операторов.
     usage: /melt
+    permission: luckychests.melt
+    permission-message: У вас нет прав на использование этой команды.
   плавить:
-    description: Включить/выключить автоплавку руды (алиас). Доступна всем игрокам.
+    description: Включить/выключить автоплавку руды на всём сервере (алиас). Только для операторов.
     usage: /плавить
+    permission: luckychests.melt
+    permission-message: У вас нет прав на использование этой команды.
   expboost:
     description: Настроить множитель выпадающего опыта. Только для операторов.
     usage: /expboost <множитель|off>
@@ -39,7 +43,7 @@ commands:
     permission: luckychests.event
   invest:
     description: Меню вложений (виртуальный сундук) + управление ценником предметов. Открытие меню доступно всем игрокам.
-    usage: /invest [add <предмет> <очки>|remove <предмет>|list]
+    usage: /invest [add <предмет> <очки> [количество]|remove <предмет>|list]
     aliases: [вложить]
   playerbattle:
     description: Включить/выключить динамические награды за убийство игроков и задать границы. Только для операторов.
@@ -82,6 +86,9 @@ commands:
     permission: luckychests.admin
 
 permissions:
+  luckychests.melt:
+    description: Доступ к командам /melt и /плавить (общесерверный переключатель автоплавки)
+    default: op
   luckychests.expboost:
     description: Доступ к команде /expboost
     default: op

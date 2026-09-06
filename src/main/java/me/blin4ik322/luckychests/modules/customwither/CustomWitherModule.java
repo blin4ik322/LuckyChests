@@ -2,6 +2,7 @@ package me.blin4ik322.luckychests.modules.customwither;
 
 import me.blin4ik322.luckychests.modules.clans.Clan;
 import me.blin4ik322.luckychests.modules.clans.ClanManager;
+import me.blin4ik322.luckychests.modules.playersbattle.PlayerBattleManager;
 import net.md_5.bungee.api.ChatColor;
 import org.bukkit.Bukkit;
 import org.bukkit.NamespacedKey;
@@ -37,18 +38,20 @@ import org.bukkit.plugin.java.JavaPlugin;
 public class CustomWitherModule implements Listener {
 
     /** Сколько очков ClanScores получает клан игрока за убийство Адского Босяка. */
-    public static final long KILL_REWARD = 400L;
+    public static final long KILL_REWARD = 250L;
 
     /** Как выглядит визер над головой — "/// Адский Босяк \\\" с розово-фиолетовым градиентом. */
     private static final String CUSTOM_NAME = buildGradientName();
 
     private final JavaPlugin plugin;
     private final ClanManager clanManager;
+    private final PlayerBattleManager battleManager;
     private final NamespacedKey markerKey;
 
-    public CustomWitherModule(JavaPlugin plugin, ClanManager clanManager) {
+    public CustomWitherModule(JavaPlugin plugin, ClanManager clanManager, PlayerBattleManager battleManager) {
         this.plugin = plugin;
         this.clanManager = clanManager;
+        this.battleManager = battleManager;
         this.markerKey = new NamespacedKey(plugin, "hellish_bosyak");
     }
 
@@ -106,6 +109,10 @@ public class CustomWitherModule implements Listener {
         if (killer == null) {
             return;
         }
+
+        // Надбавка к собственной награде за голову (I2) — независимо от того,
+        // состоит ли убийца в клане.
+        battleManager.registerBossKill(killer.getUniqueId(), PlayerBattleManager.WITHER_KILL_BONUS);
 
         Clan clan = clanManager.getClanByPlayer(killer.getUniqueId());
         if (clan == null) {

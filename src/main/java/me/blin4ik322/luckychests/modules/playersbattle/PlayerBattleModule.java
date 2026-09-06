@@ -53,6 +53,15 @@ public class PlayerBattleModule {
         Bukkit.getPluginManager().registerEvents(new PlayerBattleListener(manager, clanManager), plugin);
     }
 
+    /**
+     * Менеджер надбавок и наград. Нужен модулям боссов (CustomWitherModule,
+     * DragonBossModule), чтобы начислять убийце надбавку к его собственной
+     * награде за голову. Доступен только после enable().
+     */
+    public PlayerBattleManager getManager() {
+        return manager;
+    }
+
     /** Дополнительное сохранение при выключении плагина (см. LuckyChests#onDisable). */
     public void save() {
         if (manager != null) {

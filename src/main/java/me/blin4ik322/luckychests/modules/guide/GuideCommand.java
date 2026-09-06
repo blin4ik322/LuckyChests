@@ -4,6 +4,7 @@ import me.blin4ik322.luckychests.modules.appleboost.AppleBoostModule;
 import me.blin4ik322.luckychests.modules.customwither.CustomWitherModule;
 import me.blin4ik322.luckychests.modules.expboost.ExpBoostModule;
 import me.blin4ik322.luckychests.modules.invest.InvestModule;
+import me.blin4ik322.luckychests.modules.invest.InvestPrice;
 import me.blin4ik322.luckychests.modules.witherboost.WitherBoostModule;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -137,7 +138,7 @@ public class GuideCommand implements CommandExecutor, TabCompleter {
         sender.sendMessage(ChatColor.YELLOW + "/top" + ChatColor.GRAY + " — топ кланов по очкам");
         sender.sendMessage(ChatColor.YELLOW + "/shop" + ChatColor.GRAY + " — магазин за очки клана (подробнее — "
                 + ChatColor.YELLOW + "/guide shop" + ChatColor.GRAY + ")");
-        sender.sendMessage(ChatColor.YELLOW + "/bounties" + ChatColor.GRAY + " — награды за убийство игроков (растут со стриком жертвы)");
+        sender.sendMessage(ChatColor.YELLOW + "/bounties" + ChatColor.GRAY + " — награды за убийство игроков (растут с надбавкой жертвы)");
         sender.sendMessage(ChatColor.YELLOW + "Адский Босяк" + ChatColor.GRAY + " — особый визер, встречается вместо обычного"
                 + " (подробнее — " + ChatColor.YELLOW + "/guide wither" + ChatColor.GRAY + ")");
         sender.sendMessage(ChatColor.YELLOW + "PvP-режим" + ChatColor.GRAY + " — что происходит в бою с другим игроком (подробнее — "
@@ -217,7 +218,7 @@ public class GuideCommand implements CommandExecutor, TabCompleter {
     }
 
     private void sendInvestPrices(CommandSender sender) {
-        Map<Material, Integer> values = investModule.getItemValues();
+        Map<Material, InvestPrice> values = investModule.getItemValues();
         if (values.isEmpty()) {
             sender.sendMessage(ChatColor.GRAY + "Ценник пока пуст — загляните позже.");
             return;
@@ -225,9 +226,13 @@ public class GuideCommand implements CommandExecutor, TabCompleter {
 
         sender.sendMessage(ChatColor.GOLD + "" + ChatColor.BOLD + "Ценник /invest:");
         values.entrySet().stream()
-                .sorted(Comparator.<Map.Entry<Material, Integer>>comparingInt(Map.Entry::getValue).reversed())
+                // Сортируем по цене одной штуки, чтобы дорогие позиции были сверху
+                // независимо от того, каким размером партии они заданы.
+                .sorted(Comparator.<Map.Entry<Material, InvestPrice>>comparingDouble(
+                        entry -> entry.getValue().getPoints() / (double) entry.getValue().getUnit()).reversed())
                 .forEach(entry -> sender.sendMessage(ChatColor.WHITE + entry.getKey().name() + ChatColor.GRAY + " — "
-                        + ChatColor.YELLOW + entry.getValue() + ChatColor.GRAY + " очков/шт."));
+                        + ChatColor.YELLOW + entry.getValue().getPoints() + ChatColor.GRAY + " очков за "
+                        + ChatColor.WHITE + entry.getValue().getUnit() + ChatColor.GRAY + " шт."));
     }
 
     private void sendCommandList(CommandSender sender) {

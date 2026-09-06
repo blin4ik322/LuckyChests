@@ -8,11 +8,24 @@ import org.bukkit.command.CommandSender;
 /**
  * Обработчик команд /melt и /плавить (часть модуля automelter).
  * Переключает состояние автоплавки руды (AutoMelterModule) вкл/выкл.
+ *
+ * Только для операторов: AutoMelterModule#enabled — ОДИН общий флаг на весь
+ * сервер, а не персональная настройка игрока, поэтому любой, кто может
+ * выполнить эту команду, включает и выключает автоплавку сразу всем.
  */
 public class MeltCommand implements CommandExecutor {
 
+    private static final String PERMISSION = "luckychests.melt";
+
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+        // Дублирует permission из plugin.yml — на случай, если команду
+        // зарегистрируют в обход её объявления.
+        if (!sender.hasPermission(PERMISSION)) {
+            sender.sendMessage(ChatColor.RED + "У вас недостаточно прав для использования этой команды.");
+            return true;
+        }
+
         boolean newState = AutoMelterModule.toggle();
 
         if (newState) {

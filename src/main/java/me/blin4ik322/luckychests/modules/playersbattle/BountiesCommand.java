@@ -44,11 +44,11 @@ public class BountiesCommand implements CommandExecutor {
         int place = 1;
         for (Map.Entry<UUID, Integer> entry : bounties) {
             String name = resolveName(entry.getKey());
-            int streak = manager.getStreak(entry.getKey());
+            int bonusPercent = manager.getBonusPercent(entry.getKey());
             sender.sendMessage(ChatColor.GRAY + "" + place + ". "
                     + ChatColor.AQUA + name + ChatColor.RESET
                     + ChatColor.YELLOW + " — " + entry.getValue() + " очков"
-                    + ChatColor.GRAY + " (" + streak + " убийств подряд)");
+                    + ChatColor.GRAY + " (+" + bonusPercent + "% к награде)");
             place++;
         }
 

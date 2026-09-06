@@ -56,6 +56,10 @@ public class LootChestsModule {
     private final Map<String, LootDrop> drops = new LinkedHashMap<>(); // ключ — имя материала
     private final Map<String, ActiveLootChest> activeChests = new HashMap<>(); // ключ — locationKey
 
+    // Хранилища, прочитанные из lootchests.yml при старте и ещё не восстановленные
+    // в мире (см. restoreActiveChests(), вызывается на первом тике сервера).
+    private final List<SavedChest> pendingRestore = new ArrayList<>();
+
     // ---------------------------------------------------------------
     // Настройка разброса предметов по слотам хранилища.
     // MIN_SPLIT_PIECES — минимум кусков на которые делится каждый предмет.
@@ -73,6 +77,9 @@ public class LootChestsModule {
         this.plugin = plugin;
         this.configFile = new File(plugin.getDataFolder(), "lootchests.yml");
         load();
+        // Восстанавливаем сохранённые хранилища на первом тике: к этому моменту
+        // миры уже загружены, можно трогать блоки и спавнить летающий текст.
+        Bukkit.getScheduler().runTask(plugin, this::restoreActiveChests);
     }
 
     // ---------------------------------------------------------------
@@ -113,6 +120,66 @@ public class LootChestsModule {
                 drops.put(material.name(), new LootDrop(material, min, max, chance));
             }
         }
+
+        pendingRestore.clear();
+        ConfigurationSection activeSection = config.getConfigurationSection("active");
+        if (activeSection != null) {
+            for (String key : activeSection.getKeys(false)) {
+                Location loc = parseLocationKey(activeSection.getString(key + ".location", ""));
+                if (loc == null) {
+                    continue;
+                }
+                pendingRestore.add(new SavedChest(loc,
+                        activeSection.getLong(key + ".remaining", ActiveLootChest.NO_COUNTDOWN)));
+            }
+        }
+    }
+
+    /**
+     * Возвращает в игру хранилища, стоявшие в мире на момент выключения сервера:
+     * заново регистрирует их в {@link #activeChests} (иначе они навсегда остались
+     * бы незащищёнными от разрушения, а их координаты — занятыми для новых
+     * хранилищ) и продолжает отсчёт с того места, на котором он остановился.
+     *
+     * Записи, под которыми в мире уже нет контейнера (блок сломали в оффлайне,
+     * откатили регион и т.п.), просто отбрасываются.
+     */
+    private void restoreActiveChests() {
+        List<SavedChest> saved = new ArrayList<>(pendingRestore);
+        pendingRestore.clear();
+
+        int restored = 0;
+        for (SavedChest entry : saved) {
+            Material blockType = entry.location.getBlock().getType();
+            if (blockType != Material.CHEST && blockType != Material.BARREL
+                    && blockType != Material.TRAPPED_CHEST) {
+                continue;
+            }
+
+            ActiveLootChest chest = new ActiveLootChest(entry.location);
+            activeChests.put(locationKey(entry.location), chest);
+            restored++;
+
+            if (entry.remaining != ActiveLootChest.NO_COUNTDOWN) {
+                // Хранилище уже открывали — досчитываем оставшееся время.
+                // Отсчёт "стоит на паузе", пока сервер выключен, поэтому берём
+                // ровно тот остаток, что был сохранён (минимум 1 секунду).
+                chest.setCountdownStarted(true);
+                startCountdown(chest, Math.max(1L, entry.remaining));
+            }
+        }
+
+        if (restored > 0) {
+            plugin.getLogger().info("[LootChests] восстановлено хранилищ: " + restored);
+        }
+
+        save();
+
+        // Если часть записей протухла (или max увеличили в оффлайне), добираем
+        // недостающие хранилища — иначе после перезапуска их стало бы меньше.
+        if (running) {
+            fillActiveChests();
+        }
     }
 
     public void save() {
@@ -135,6 +202,18 @@ public class LootChestsModule {
             config.set(path + ".min", drop.getMin());
             config.set(path + ".max", drop.getMax());
             config.set(path + ".chance", drop.getChance());
+        }
+
+        // Стоящие сейчас в мире хранилища и остаток их отсчёта — чтобы после
+        // перезапуска сервера они не превратились в "ничьи" сундуки навсегда.
+        config.set("active", null);
+        int index = 0;
+        for (ActiveLootChest chest : activeChests.values()) {
+            String path = "active." + index++;
+            config.set(path + ".location", locationKey(chest.getLocation()));
+            config.set(path + ".remaining", chest.isCountdownStarted()
+                    ? Math.max(0L, chest.getSecondsLeft())
+                    : ActiveLootChest.NO_COUNTDOWN);
         }
 
         try {
@@ -372,6 +451,7 @@ public class LootChestsModule {
 
         ActiveLootChest chest = new ActiveLootChest(toBlockLocation(loc));
         activeChests.put(locationKey(loc), chest);
+        save();
 
         // Заполняем лут на следующем тике — к этому моменту TileEntity блока
         // гарантированно инициализирован сервером и инвентарь не будет сброшен.
@@ -491,10 +571,11 @@ public class LootChestsModule {
             return;
         }
         chest.setCountdownStarted(true);
-        startCountdown(chest);
+        startCountdown(chest, timerSeconds);
+        save(); // фиксируем, что отсчёт пошёл — переживёт перезапуск сервера
     }
 
-    private void startCountdown(ActiveLootChest chest) {
+    private void startCountdown(ActiveLootChest chest, long startSeconds) {
         Location loc = chest.getLocation();
         Location textLoc = loc.clone().add(0.5, 1.5, 0.5);
 
@@ -505,10 +586,11 @@ public class LootChestsModule {
             td.setAlignment(TextDisplay.TextAlignment.CENTER);
         });
         chest.setTextDisplay(display);
-        updateDisplayText(display, timerSeconds);
+        chest.setSecondsLeft(startSeconds);
+        updateDisplayText(display, startSeconds);
 
         BukkitTask task = new BukkitRunnable() {
-            long remaining = timerSeconds;
+            long remaining = startSeconds;
 
             @Override
             public void run() {
@@ -518,6 +600,8 @@ public class LootChestsModule {
                     cancel();
                     return;
                 }
+                // Держим остаток в самом хранилище, чтобы save() мог его записать.
+                chest.setSecondsLeft(remaining);
                 updateDisplayText(display, remaining);
             }
         }.runTaskTimer(plugin, 20L, 20L);
@@ -547,16 +631,40 @@ public class LootChestsModule {
         activeChests.remove(locationKey(loc));
 
         if (running) {
-            spawnRandomChest();
+            spawnRandomChest(); // spawnChestAt() внутри сам вызовет save()
+        } else {
+            save();
         }
     }
 
-    /** Вызывается из LuckyChests#onDisable() — просто отменяет активные задачи отсчёта. */
+    /**
+     * Вызывается из LuckyChests#onDisable(): останавливает отсчёты, убирает
+     * летающий текст (это обычные сущности мира — без явного удаления они
+     * остались бы висеть над хранилищами и после перезапуска) и записывает
+     * текущее состояние в lootchests.yml, чтобы restoreActiveChests() смог
+     * поднять всё обратно при следующем запуске.
+     */
     public void shutdown() {
         for (ActiveLootChest chest : activeChests.values()) {
             if (chest.getCountdownTask() != null) {
                 chest.getCountdownTask().cancel();
             }
+            if (chest.getTextDisplay() != null) {
+                chest.getTextDisplay().remove();
+            }
+        }
+        save();
+    }
+
+    /** Запись о хранилище, прочитанная из lootchests.yml до его восстановления в мире. */
+    private static final class SavedChest {
+
+        private final Location location;
+        private final long remaining; // ActiveLootChest.NO_COUNTDOWN — ещё не открывали
+
+        private SavedChest(Location location, long remaining) {
+            this.location = location;
+            this.remaining = remaining;
         }
     }
 }
