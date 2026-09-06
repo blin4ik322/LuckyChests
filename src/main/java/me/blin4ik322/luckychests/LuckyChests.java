@@ -43,6 +43,7 @@ public final class LuckyChests extends JavaPlugin {
     private EnemyPotionModule enemyPotionModule;
     private MeteoriteModule meteoriteModule;
     private LootChestsModule lootChestsModule;
+    private DragonBossModule dragonBossModule;
 
 
     @Override
@@ -93,7 +94,8 @@ public final class LuckyChests extends JavaPlugin {
 
         // ── Дракон Края ──────────────────────────────────────────────────────
         // Награда клану за убийство дракона, не чаще раза в час на весь сервер.
-        new DragonBossModule(this, clanManager, playerBattleModule.getManager()).enable();
+        dragonBossModule = new DragonBossModule(this, clanManager, playerBattleModule.getManager());
+        dragonBossModule.enable();
 
         // ── WorldBorderTimer ─────────────────────────────────────────────────
         // Сужение барьера мира по /event start|stop.
@@ -178,6 +180,9 @@ public final class LuckyChests extends JavaPlugin {
         }
         if (lootChestsModule != null) {
             lootChestsModule.shutdown();
+        }
+        if (dragonBossModule != null) {
+            dragonBossModule.shutdown();
         }
         getLogger().info("LuckyChests выключен.");
     }

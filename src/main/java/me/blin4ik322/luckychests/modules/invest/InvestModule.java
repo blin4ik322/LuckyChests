@@ -16,8 +16,11 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.EnumMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -147,7 +150,7 @@ public class InvestModule {
         }
 
         int slot = 0;
-        for (Map.Entry<Material, InvestPrice> entry : itemValues.entrySet()) {
+        for (Map.Entry<Material, InvestPrice> entry : sortedByUnitPrice()) {
             if (slot == PRICE_LIST_BACK_SLOT) {
                 slot++; // не занимаем слот кнопки "Назад" товарами
             }
@@ -160,6 +163,24 @@ public class InvestModule {
 
         inventory.setItem(PRICE_LIST_BACK_SLOT, buildBackButton());
         player.openInventory(inventory);
+    }
+
+    /**
+     * Ценник, отсортированный от самого дешёвого предмета к самому дорогому.
+     *
+     * Сравниваются цены за ОДНУ штуку (очки / размер партии), а не за партию:
+     * иначе стак булыжника глубинного сланца ("1 очко за 64 шт.") оказался бы
+     * в одном ряду с железным слитком ("1 очко за 1 шт."), хотя стоит он в 64
+     * раза меньше. При равной цене за штуку порядок задаётся именем материала,
+     * чтобы список не перемешивался между открытиями.
+     */
+    private List<Map.Entry<Material, InvestPrice>> sortedByUnitPrice() {
+        List<Map.Entry<Material, InvestPrice>> sorted = new ArrayList<>(itemValues.entrySet());
+        sorted.sort(Comparator
+                .<Map.Entry<Material, InvestPrice>>comparingDouble(
+                        entry -> entry.getValue().getPoints() / (double) entry.getValue().getUnit())
+                .thenComparing(entry -> entry.getKey().name()));
+        return sorted;
     }
 
     private ItemStack buildBackgroundGlass() {
@@ -405,22 +426,22 @@ public class InvestModule {
         for (Material log : new Material[]{
                 Material.OAK_LOG, Material.SPRUCE_LOG, Material.BIRCH_LOG, Material.JUNGLE_LOG,
                 Material.ACACIA_LOG, Material.DARK_OAK_LOG, Material.MANGROVE_LOG, Material.CHERRY_LOG}) {
-            put(log, 1, 32); // ~0.03125 / шт
+            put(log, 1, 32);
         }
-        put(Material.COAL, 1, 32); // ~0.03125 / шт
-        put(Material.POTATO, 3, 64); // ~0.046875 / шт
-        put(Material.CARROT, 3, 64); // ~0.046875 / шт
-        put(Material.LAPIS_LAZULI, 2, 32); // ~0.0625 / шт
-        put(Material.REDSTONE, 2, 32); // ~0.0625 / шт
-        put(Material.IRON_INGOT, 1, 1); // 1.0 / шт
-        put(Material.COD, 1, 1); // 1.0 / шт
-        put(Material.GOLD_INGOT, 2, 1); // 2.0 / шт
-        put(Material.SHULKER_SHELL, 5, 1); // 5.0 / шт
-        put(Material.DIAMOND, 7, 1); // 7.0 / шт
-        put(Material.WITHER_SKELETON_SKULL, 15, 1); // 15.0 / шт
-        put(Material.ANCIENT_DEBRIS, 20, 1); // 20.0 / шт
-        put(Material.ELYTRA, 200, 1); // 200.0 / шт
-        put(Material.DRAGON_EGG, 500, 1); // 500.0 / шт
+        put(Material.IRON_INGOT, 1, 1);
+        put(Material.COAL, 1, 32);
+        put(Material.LAPIS_LAZULI, 2, 32);
+        put(Material.REDSTONE, 2, 32);
+        put(Material.GOLD_INGOT, 2, 1);
+        put(Material.DIAMOND, 7, 1);
+        put(Material.POTATO, 3, 64);
+        put(Material.CARROT, 3, 64);
+        put(Material.ANCIENT_DEBRIS, 20, 1);
+        put(Material.COD, 1, 1);
+        put(Material.SHULKER_SHELL, 5, 1);
+        put(Material.WITHER_SKELETON_SKULL, 15, 1);
+        put(Material.DRAGON_EGG, 500, 1);
+        put(Material.ELYTRA, 200, 1);
     }
 
     private void put(Material material, int points, int unit) {
